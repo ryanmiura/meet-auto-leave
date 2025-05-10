@@ -30,6 +30,7 @@ function setupParticipantObserver() {
   const observer = new MutationObserver(checkParticipants);
   
   // Start observing once the participant count element is available
+  //!* Seletor para contagem de participantes - precisa verificar no Meet
   waitForElement('[data-participant-count]').then(element => {
     observer.observe(element, { 
       childList: true, 
@@ -40,6 +41,7 @@ function setupParticipantObserver() {
 }
 
 async function checkParticipants(mutations) {
+  //!* Seletor para elemento de contagem de participantes
   const countElement = document.querySelector('[data-participant-count]');
   if (!countElement) return;
 
@@ -56,18 +58,22 @@ async function checkParticipants(mutations) {
 // Auto-join functionality
 async function autoJoin() {
   // Wait for and click the mic/camera off buttons if needed
+  //!* Seletor do botão de microfone - verificar texto exato do aria-label
   const micButton = await waitForElement('[aria-label*="microfone"]');
+  //!* Seletor do botão de câmera - verificar texto exato do aria-label
   const cameraButton = await waitForElement('[aria-label*="câmera"]');
   
+  //!* Atributo que indica se o microfone está mutado
   if (micButton?.getAttribute('data-is-muted') === 'false') {
     micButton.click();
   }
   
+  //!* Atributo que indica se a câmera está mutada
   if (cameraButton?.getAttribute('data-is-muted') === 'false') {
     cameraButton.click();
   }
 
-  // Click the join button
+  //!* Seletor do botão de participar - verificar texto exato do aria-label
   const joinButton = await waitForElement('[aria-label*="Participar"]');
   if (joinButton) {
     joinButton.click();
@@ -102,15 +108,18 @@ async function checkExitConditions() {
 
 // Chat functionality
 async function sendInitialMessage() {
+  //!* Seletor do botão de chat - verificar texto exato do aria-label
   await waitForElement('[aria-label*="chat"]');
   await sendChatMessage('Olá');
 }
 
 async function sendChatMessage(message) {
+  //!* Seletor do botão de chat - verificar texto exato do aria-label
   const chatButton = document.querySelector('[aria-label*="chat"]');
   if (chatButton) {
     chatButton.click();
     
+    //!* Seletor do campo de input do chat - verificar texto exato do aria-label
     const input = await waitForElement('[aria-label*="Enviar mensagem"]');
     if (input) {
       input.textContent = message;
@@ -123,6 +132,7 @@ async function sendChatMessage(message) {
 function setupReactionObserver() {
   const observer = new MutationObserver(checkReactions);
   
+  //!* Seletor para contagem de reações - precisa verificar no Meet
   waitForElement('[data-reaction-count]').then(element => {
     observer.observe(element, {
       childList: true,
@@ -174,6 +184,7 @@ async function exitMeeting(reason) {
   await sendChatMessage('Até mais');
   
   // Click leave button
+  //!* Seletor do botão de sair - verificar texto exato do aria-label
   const leaveButton = document.querySelector('[aria-label*="Sair da chamada"]');
   if (leaveButton) {
     leaveButton.click();
