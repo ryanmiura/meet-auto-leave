@@ -6,13 +6,14 @@ let participantCount = 0;
 let peakParticipants = 0;
 let joinTime = null;
 let exitTimer = null;
+let currentUrl = window.location.href;
 
 // Initialize when DOM is ready
 document.addEventListener('DOMContentLoaded', initialize);
 
 async function initialize() {
   // Get configuration from storage
-  config = await getConfiguration();
+  config = await StorageManager.getConfig();
   
   // Set up observers for participant count and reactions
   setupParticipantObserver();
@@ -143,14 +144,6 @@ function setupReactionObserver() {
 }
 
 // Helper functions
-async function getConfiguration() {
-  return new Promise(resolve => {
-    chrome.runtime.sendMessage({ type: 'GET_CONFIG' }, config => {
-      resolve(config);
-    });
-  });
-}
-
 function waitForElement(selector, timeout = 10000) {
   return new Promise(resolve => {
     const element = document.querySelector(selector);
@@ -182,6 +175,15 @@ function waitForElement(selector, timeout = 10000) {
 async function exitMeeting(reason) {
   // Send goodbye message
   await sendChatMessage('Até mais');
+  
+  // Notify background about meeting completion
+  chrome.runtime.sendMessage({
+    type: 'COMPLETE_MEETING',
+    data: {
+      url: currentUrl,
+      exitReason: reason
+    }
+  });
   
   // Click leave button
   //!* Seletor do botão de sair - verificar texto exato do aria-label

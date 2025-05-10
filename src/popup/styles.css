@@ -92,7 +92,7 @@ button {
     font-size: 14px;
     font-weight: 500;
     cursor: pointer;
-    transition: background-color 0.2s;
+    transition: all 0.2s;
 }
 
 .btn-primary {
@@ -106,6 +106,20 @@ button {
 
 .btn-primary:active {
     background-color: #174ea6;
+}
+
+.btn-remove {
+    background-color: transparent;
+    color: var(--error-color);
+    padding: 4px 8px;
+    font-size: 12px;
+    width: auto;
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+
+.btn-remove:hover {
+    background-color: rgba(217, 48, 37, 0.1);
 }
 
 /* Status */
@@ -133,6 +147,80 @@ button {
 
 .status-message {
     margin: 0;
+}
+
+/* Lista de Reuniões */
+.meetings-list {
+    max-height: 200px;
+    overflow-y: auto;
+    padding-right: 8px;
+}
+
+.meeting-item {
+    padding: 12px;
+    margin-bottom: 8px;
+    background-color: var(--hover-color);
+    border-radius: 4px;
+    font-size: 14px;
+    border-left: 4px solid var(--primary-color);
+    position: relative;
+}
+
+.meeting-item:hover .btn-remove {
+    opacity: 1;
+}
+
+.meeting-item:last-child {
+    margin-bottom: 0;
+}
+
+.meeting-time {
+    color: var(--primary-color);
+    font-weight: 500;
+    margin-bottom: 4px;
+    padding-right: 60px; /* Espaço para o botão remover */
+}
+
+.meeting-url {
+    color: var(--text-color);
+    word-break: break-all;
+}
+
+.meeting-item.completed {
+    border-left-color: var(--success-color);
+    opacity: 0.7;
+}
+
+.meeting-remove {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+}
+
+.no-meetings {
+    text-align: center;
+    color: #5f6368;
+    font-size: 14px;
+    padding: 16px;
+}
+
+/* Scrollbar personalizada */
+.meetings-list::-webkit-scrollbar {
+    width: 8px;
+}
+
+.meetings-list::-webkit-scrollbar-track {
+    background: var(--hover-color);
+    border-radius: 4px;
+}
+
+.meetings-list::-webkit-scrollbar-thumb {
+    background: var(--border-color);
+    border-radius: 4px;
+}
+
+.meetings-list::-webkit-scrollbar-thumb:hover {
+    background: #bdc1c6;
 }
 
 /* Responsividade */

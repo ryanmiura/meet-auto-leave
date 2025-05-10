@@ -18,7 +18,16 @@
   "content_scripts": [
     {
       "matches": ["*://meet.google.com/*"],
-      "js": ["src/content/content.js"]
+      "js": [
+        "src/utils/storage.js",
+        "src/content/content.js"
+      ]
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["src/utils/storage.js"],
+      "matches": ["*://meet.google.com/*"]
     }
   ],
   "action": {
