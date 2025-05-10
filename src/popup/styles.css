@@ -7,6 +7,7 @@
     --border-color: #dadce0;
     --bg-color: #ffffff;
     --hover-color: #f8f9fa;
+    --secondary-text: #5f6368;
 }
 
 * {
@@ -179,6 +180,15 @@ button {
     font-weight: 500;
     margin-bottom: 4px;
     padding-right: 60px; /* Espaço para o botão remover */
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.time-from-now {
+    color: var(--secondary-text);
+    font-size: 12px;
+    font-weight: normal;
 }
 
 .meeting-url {
@@ -199,7 +209,7 @@ button {
 
 .no-meetings {
     text-align: center;
-    color: #5f6368;
+    color: var(--secondary-text);
     font-size: 14px;
     padding: 16px;
 }
@@ -235,6 +245,12 @@ button {
 
     input {
         padding: 6px 10px;
+    }
+
+    .meeting-time {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 4px;
     }
 }
 

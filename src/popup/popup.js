@@ -19,7 +19,18 @@ async function initialize() {
 
         //!* ID do input de data/hora definido no popup.html
         const meetTime = document.getElementById('meetTime');
-        meetTime.min = new Date().toISOString().slice(0, 16);
+        
+        // Configura data/hora mínima (próximo minuto)
+        const now = new Date();
+        now.setMinutes(now.getMinutes() + 1, 0, 0); // Próximo minuto, zerando segundos
+        
+        // Converte para string local ISO
+        const localISOString = new Date(now.getTime() - now.getTimezoneOffset() * 60000)
+            .toISOString()
+            .slice(0, 16);
+        
+        meetTime.min = localISOString;
+        meetTime.value = localISOString;
 
         // Adicionar event listeners
         scheduleForm.addEventListener('submit', handleScheduleSubmit);
@@ -36,7 +47,12 @@ async function handleScheduleSubmit(event) {
 
     //!* IDs dos campos do formulário de agendamento definidos no popup.html
     const meetUrl = document.getElementById('meetUrl').value;
-    const meetTime = document.getElementById('meetTime').value;
+    const meetTimeInput = document.getElementById('meetTime').value;
+    
+    // Converte a string local para timestamp UTC
+    const localDate = new Date(meetTimeInput);
+    const selectedTime = localDate.getTime();
+    const now = Date.now();
 
     // Validar URL do Meet
     if (!isValidMeetUrl(meetUrl)) {
@@ -44,11 +60,30 @@ async function handleScheduleSubmit(event) {
         return;
     }
 
+    // Validar se a data/hora não é no passado ou menos de 1 minuto no futuro
+    if (selectedTime <= now) {
+        showStatus('A data/hora deve ser no futuro', 'error');
+        return;
+    }
+
+    if (selectedTime - now < 60000) { // 60000ms = 1 minuto
+        showStatus('A reunião deve ser agendada para pelo menos 1 minuto no futuro', 'error');
+        return;
+    }
+
     try {
-        await StorageManager.scheduleMeeting(meetUrl, new Date(meetTime).getTime());
+        await StorageManager.scheduleMeeting(meetUrl, selectedTime);
         await updateMeetingsList(); // Atualiza a lista após agendar
         showStatus('Reunião agendada com sucesso!', 'success');
         scheduleForm.reset();
+        
+        // Reseta o campo de data/hora para o próximo minuto
+        const nextMinute = new Date();
+        nextMinute.setMinutes(nextMinute.getMinutes() + 1, 0, 0);
+        const nextLocalISOString = new Date(nextMinute.getTime() - nextMinute.getTimezoneOffset() * 60000)
+            .toISOString()
+            .slice(0, 16);
+        document.getElementById('meetTime').value = nextLocalISOString;
     } catch (error) {
         showStatus('Erro ao agendar reunião: ' + error.message, 'error');
     }
@@ -141,12 +176,16 @@ async function updateMeetingsList() {
         const date = new Date(meeting.time);
         const isPast = meeting.time < now;
         const formattedDate = formatDateTime(date);
+        const timeFromNow = formatTimeFromNow(meeting.time);
         
         return `
             <div class="meeting-item ${isPast ? 'completed' : ''}" 
                  data-url="${meeting.url}" 
                  data-time="${meeting.time}">
-                <div class="meeting-time">${formattedDate}</div>
+                <div class="meeting-time">
+                    ${formattedDate}
+                    <span class="time-from-now">(${timeFromNow})</span>
+                </div>
                 <div class="meeting-url">${meeting.url}</div>
                 <div class="meeting-remove">
                     <button class="btn-remove" title="Remover reunião">
@@ -170,4 +209,22 @@ function formatDateTime(date) {
         hour12: false
     };
     return new Intl.DateTimeFormat('pt-BR', options).format(date);
+}
+
+function formatTimeFromNow(timestamp) {
+    const now = Date.now();
+    const diff = timestamp - now;
+    const minutes = Math.floor(diff / 60000);
+    
+    if (minutes < 60) {
+        return `em ${minutes} minuto${minutes !== 1 ? 's' : ''}`;
+    }
+    
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) {
+        return `em ${hours} hora${hours !== 1 ? 's' : ''}`;
+    }
+    
+    const days = Math.floor(hours / 24);
+    return `em ${days} dia${days !== 1 ? 's' : ''}`;
 }
