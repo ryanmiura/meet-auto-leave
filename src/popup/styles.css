@@ -8,6 +8,7 @@
     --bg-color: #ffffff;
     --hover-color: #f8f9fa;
     --secondary-text: #5f6368;
+    --tab-inactive: #f1f3f4;
 }
 
 * {
@@ -42,12 +43,72 @@ h2 {
     color: var(--text-color);
 }
 
+/* Navegação por abas */
+.tab-nav {
+    display: flex;
+    margin-bottom: 16px;
+    border-bottom: 2px solid var(--border-color);
+    position: relative;
+}
+
+.tab-button {
+    flex: 1;
+    padding: 12px;
+    border: none;
+    background: none;
+    color: var(--secondary-text);
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s;
+    position: relative;
+}
+
+.tab-button::after {
+    content: '';
+    position: absolute;
+    bottom: -2px;
+    left: 0;
+    width: 100%;
+    height: 2px;
+    background-color: var(--primary-color);
+    transform: scaleX(0);
+    transition: transform 0.3s;
+}
+
+.tab-button.active {
+    color: var(--primary-color);
+}
+
+.tab-button.active::after {
+    transform: scaleX(1);
+}
+
+.tab-button:hover {
+    background-color: var(--hover-color);
+}
+
+/* Conteúdo das abas */
+.tab-content {
+    display: none;
+    opacity: 0;
+    transform: translateY(10px);
+    transition: all 0.3s;
+}
+
+.tab-content.active {
+    display: block;
+    opacity: 1;
+    transform: translateY(0);
+}
+
 /* Seções */
 .section {
     margin-bottom: 24px;
     padding: 16px;
     border: 1px solid var(--border-color);
     border-radius: 8px;
+    animation: fadeIn 0.3s ease-out;
 }
 
 .section:last-child {
@@ -64,6 +125,13 @@ label {
     margin-bottom: 8px;
     font-size: 14px;
     color: var(--text-color);
+}
+
+.help-text {
+    display: block;
+    font-size: 12px;
+    color: var(--secondary-text);
+    margin-top: 4px;
 }
 
 input {
@@ -179,7 +247,7 @@ button {
     color: var(--primary-color);
     font-weight: 500;
     margin-bottom: 4px;
-    padding-right: 60px; /* Espaço para o botão remover */
+    padding-right: 60px;
     display: flex;
     align-items: center;
     gap: 8px;
@@ -264,10 +332,6 @@ button {
         opacity: 1;
         transform: translateY(0);
     }
-}
-
-.section {
-    animation: fadeIn 0.3s ease-out;
 }
 
 /* Utilidades */

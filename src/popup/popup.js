@@ -8,6 +8,10 @@ const configForm = document.getElementById('configForm');
 const status = document.getElementById('status');
 const meetingsList = document.getElementById('meetingsList');
 
+// Elementos das abas
+const tabButtons = document.querySelectorAll('.tab-button');
+const tabContents = document.querySelectorAll('.tab-content');
+
 async function initialize() {
     try {
         // Carregar configurações atuais
@@ -36,9 +40,40 @@ async function initialize() {
         scheduleForm.addEventListener('submit', handleScheduleSubmit);
         configForm.addEventListener('submit', handleConfigSubmit);
         meetingsList.addEventListener('click', handleMeetingClick);
+        
+        // Event listeners das abas
+        tabButtons.forEach(button => {
+            button.addEventListener('click', () => switchTab(button.dataset.tab));
+        });
+
+        // Restaurar última aba ativa
+        const lastTab = localStorage.getItem('lastActiveTab') || 'auto-join';
+        switchTab(lastTab);
     } catch (error) {
         showStatus('Erro ao inicializar: ' + error.message, 'error');
     }
+}
+
+// Funções de navegação das abas
+function switchTab(tabId) {
+    // Remove classe active de todas as abas
+    tabButtons.forEach(button => {
+        button.classList.remove('active');
+        if (button.dataset.tab === tabId) {
+            button.classList.add('active');
+        }
+    });
+
+    // Esconde todos os conteúdos e mostra o selecionado
+    tabContents.forEach(content => {
+        content.classList.remove('active');
+        if (content.id === tabId) {
+            content.classList.add('active');
+        }
+    });
+
+    // Salva a última aba ativa
+    localStorage.setItem('lastActiveTab', tabId);
 }
 
 // Handlers de formulário

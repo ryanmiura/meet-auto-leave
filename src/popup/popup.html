@@ -10,71 +10,87 @@
     <div class="container">
         <h1>Meet Auto Leave</h1>
         
-        <!-- Agendar Reunião -->
-        <section class="section">
-            <h2>Agendar Reunião</h2>
-            <!--!* ID usado no JS: scheduleForm - Form de agendamento -->
-            <form id="scheduleForm">
-                <div class="form-group">
-                    <label for="meetUrl">Link do Meet:</label>
-                    <!--!* ID usado no JS: meetUrl - Input do link da reunião -->
-                    <input type="url" id="meetUrl" required 
-                           placeholder="https://meet.google.com/xxx-yyyy-zzz">
-                </div>
-                <div class="form-group">
-                    <label for="meetTime">Data e Hora:</label>
-                    <!--!* ID usado no JS: meetTime - Input de data/hora -->
-                    <input type="datetime-local" id="meetTime" required>
-                </div>
-                <button type="submit" class="btn-primary">Agendar</button>
-            </form>
-        </section>
+        <!-- Navegação por abas -->
+        <nav class="tab-nav">
+            <button class="tab-button active" data-tab="auto-join">Join</button>
+            <button class="tab-button" data-tab="auto-leave">Leave</button>
+        </nav>
 
-        <!-- Lista de Reuniões -->
-        <section class="section">
-            <h2>Reuniões Agendadas</h2>
-            <!--!* ID usado no JS: meetingsList - Lista de reuniões -->
-            <div id="meetingsList" class="meetings-list">
-                <!-- As reuniões serão inseridas aqui via JavaScript -->
-            </div>
-        </section>
+        <!-- Aba de Entrada Automática -->
+        <div class="tab-content active" id="auto-join">
+            <!-- Agendar Reunião -->
+            <section class="section">
+                <h2>Agendar Reunião</h2>
+                <!--!* ID usado no JS: scheduleForm - Form de agendamento -->
+                <form id="scheduleForm">
+                    <div class="form-group">
+                        <label for="meetUrl">Link do Meet:</label>
+                        <!--!* ID usado no JS: meetUrl - Input do link da reunião -->
+                        <input type="url" id="meetUrl" required 
+                               placeholder="https://meet.google.com/xxx-yyyy-zzz">
+                    </div>
+                    <div class="form-group">
+                        <label for="meetTime">Data e Hora:</label>
+                        <!--!* ID usado no JS: meetTime - Input de data/hora -->
+                        <input type="datetime-local" id="meetTime" required>
+                    </div>
+                    <button type="submit" class="btn-primary">Agendar</button>
+                </form>
+            </section>
 
-        <!-- Configurações -->
-        <section class="section">
-            <h2>Configurações</h2>
-            <!--!* ID usado no JS: configForm - Form de configurações -->
-            <form id="configForm">
-                <div class="form-group">
-                    <label for="timerDuration">Sair após (minutos):</label>
-                    <!--!* ID usado no JS: timerDuration - Input de tempo para sair -->
-                    <input type="number" id="timerDuration" min="0" 
-                           placeholder="30">
+            <!-- Lista de Reuniões -->
+            <section class="section">
+                <h2>Reuniões Agendadas</h2>
+                <!--!* ID usado no JS: meetingsList - Lista de reuniões -->
+                <div id="meetingsList" class="meetings-list">
+                    <!-- As reuniões serão inseridas aqui via JavaScript -->
                 </div>
-                
-                <div class="form-group">
-                    <label for="minParticipants">Número mínimo de participantes:</label>
-                    <!--!* ID usado no JS: minParticipants - Input de mínimo de participantes -->
-                    <input type="number" id="minParticipants" min="1" 
-                           placeholder="2">
-                </div>
+            </section>
+        </div>
 
-                <div class="form-group">
-                    <label for="peakPercentage">Porcentagem do pico para sair (%):</label>
-                    <!--!* ID usado no JS: peakPercentage - Input de porcentagem do pico -->
-                    <input type="number" id="peakPercentage" min="1" max="100" 
-                           placeholder="10">
-                </div>
+        <!-- Aba de Saída Automática -->
+        <div class="tab-content" id="auto-leave">
+            <!-- Configurações -->
+            <section class="section">
+                <h2>Configurações de Saída</h2>
+                <!--!* ID usado no JS: configForm - Form de configurações -->
+                <form id="configForm">
+                    <div class="form-group">
+                        <label for="timerDuration">Sair após (minutos):</label>
+                        <!--!* ID usado no JS: timerDuration - Input de tempo para sair -->
+                        <input type="number" id="timerDuration" min="0" 
+                               placeholder="30">
+                        <small class="help-text">0 = desativado</small>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="minParticipants">Número mínimo de participantes:</label>
+                        <!--!* ID usado no JS: minParticipants - Input de mínimo de participantes -->
+                        <input type="number" id="minParticipants" min="1" 
+                               placeholder="2">
+                        <small class="help-text">Sair quando tiver menos que isso</small>
+                    </div>
 
-                <div class="form-group">
-                    <label for="autoReactThreshold">Limite para reações automáticas:</label>
-                    <!--!* ID usado no JS: autoReactThreshold - Input de limite de reações -->
-                    <input type="number" id="autoReactThreshold" min="1" 
-                           placeholder="5">
-                </div>
+                    <div class="form-group">
+                        <label for="peakPercentage">Porcentagem do pico para sair (%):</label>
+                        <!--!* ID usado no JS: peakPercentage - Input de porcentagem do pico -->
+                        <input type="number" id="peakPercentage" min="1" max="100" 
+                               placeholder="10">
+                        <small class="help-text">Sair quando cair para % do pico</small>
+                    </div>
 
-                <button type="submit" class="btn-primary">Salvar</button>
-            </form>
-        </section>
+                    <div class="form-group">
+                        <label for="autoReactThreshold">Limite para reações automáticas:</label>
+                        <!--!* ID usado no JS: autoReactThreshold - Input de limite de reações -->
+                        <input type="number" id="autoReactThreshold" min="1" 
+                               placeholder="5">
+                        <small class="help-text">Reagir quando tiver mais que isso</small>
+                    </div>
+
+                    <button type="submit" class="btn-primary">Salvar</button>
+                </form>
+            </section>
+        </div>
 
         <!-- Status -->
         <section class="section status">
