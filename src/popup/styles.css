@@ -1,0 +1,172 @@
+/* Estilos gerais */
+:root {
+    --primary-color: #1a73e8;
+    --error-color: #d93025;
+    --success-color: #188038;
+    --text-color: #202124;
+    --border-color: #dadce0;
+    --bg-color: #ffffff;
+    --hover-color: #f8f9fa;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Roboto', 'Segoe UI', Arial, sans-serif;
+    color: var(--text-color);
+    background-color: var(--bg-color);
+    min-width: 320px;
+    max-width: 400px;
+}
+
+.container {
+    padding: 16px;
+}
+
+/* Títulos */
+h1 {
+    font-size: 18px;
+    margin-bottom: 16px;
+    color: var(--primary-color);
+    text-align: center;
+}
+
+h2 {
+    font-size: 16px;
+    margin-bottom: 12px;
+    color: var(--text-color);
+}
+
+/* Seções */
+.section {
+    margin-bottom: 24px;
+    padding: 16px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+}
+
+.section:last-child {
+    margin-bottom: 0;
+}
+
+/* Formulários */
+.form-group {
+    margin-bottom: 16px;
+}
+
+label {
+    display: block;
+    margin-bottom: 8px;
+    font-size: 14px;
+    color: var(--text-color);
+}
+
+input {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    font-size: 14px;
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+input:focus {
+    border-color: var(--primary-color);
+}
+
+input:invalid {
+    border-color: var(--error-color);
+}
+
+/* Botões */
+button {
+    width: 100%;
+    padding: 10px 16px;
+    border: none;
+    border-radius: 4px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.btn-primary {
+    background-color: var(--primary-color);
+    color: white;
+}
+
+.btn-primary:hover {
+    background-color: #1557b0;
+}
+
+.btn-primary:active {
+    background-color: #174ea6;
+}
+
+/* Status */
+.status {
+    display: none;
+    padding: 12px;
+    border-radius: 4px;
+    font-size: 14px;
+    margin-top: 16px;
+}
+
+.status.show {
+    display: block;
+}
+
+.status-success {
+    background-color: #e6f4ea;
+    color: var(--success-color);
+}
+
+.status-error {
+    background-color: #fce8e6;
+    color: var(--error-color);
+}
+
+.status-message {
+    margin: 0;
+}
+
+/* Responsividade */
+@media (max-width: 320px) {
+    .container {
+        padding: 12px;
+    }
+
+    .section {
+        padding: 12px;
+    }
+
+    input {
+        padding: 6px 10px;
+    }
+}
+
+/* Animações */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.section {
+    animation: fadeIn 0.3s ease-out;
+}
+
+/* Utilidades */
+.hidden {
+    display: none !important;
+}
