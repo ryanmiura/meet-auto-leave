@@ -71,9 +71,22 @@ async function handleScheduleSubmit(event) {
         return;
     }
 
+    const meetingData = {
+        url: meetUrl,
+        time: selectedTime
+    };
+
     try {
-        await StorageManager.scheduleMeeting(meetUrl, selectedTime);
-        await updateMeetingsList(); // Atualiza a lista após agendar
+        // Notifica o background para salvar e criar alarme
+        const response = await chrome.runtime.sendMessage({
+            type: 'SCHEDULE_MEETING',
+            data: meetingData
+        });
+
+        if (!response || !response.success) {
+            throw new Error(response?.error || 'Erro ao agendar reunião');
+        }
+
         showStatus('Reunião agendada com sucesso!', 'success');
         scheduleForm.reset();
         
@@ -84,6 +97,9 @@ async function handleScheduleSubmit(event) {
             .toISOString()
             .slice(0, 16);
         document.getElementById('meetTime').value = nextLocalISOString;
+
+        // Atualiza a lista de reuniões
+        await updateMeetingsList();
     } catch (error) {
         showStatus('Erro ao agendar reunião: ' + error.message, 'error');
     }
@@ -162,7 +178,7 @@ function showStatus(message, type) {
 async function updateMeetingsList() {
     const meetings = await StorageManager.getMeetings();
     
-    if (meetings.length === 0) {
+    if (!meetings || meetings.length === 0) {
         meetingsList.innerHTML = '<div class="no-meetings">Nenhuma reunião agendada</div>';
         return;
     }
@@ -170,9 +186,14 @@ async function updateMeetingsList() {
     // Ordena reuniões por data
     meetings.sort((a, b) => a.time - b.time);
 
+    // Filtra reuniões duplicadas
+    const uniqueMeetings = meetings.filter((meeting, index, self) =>
+        index === self.findIndex(m => m.url === meeting.url && m.time === meeting.time)
+    );
+
     // Cria HTML para cada reunião
     const now = Date.now();
-    const meetingsHtml = meetings.map(meeting => {
+    const meetingsHtml = uniqueMeetings.map(meeting => {
         const date = new Date(meeting.time);
         const isPast = meeting.time < now;
         const formattedDate = formatDateTime(date);
