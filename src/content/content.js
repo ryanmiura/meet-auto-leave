@@ -34,6 +34,7 @@ function getOrCreateDebugContainer() {
     if (!container) {
         container = document.createElement('div');
         container.id = 'meet-auto-leave-debug';
+        container.style.display = config?.showDebug ? 'block' : 'none';
         Object.assign(container.style, {
             position: 'fixed',
             top: '10px',
@@ -131,6 +132,22 @@ async function initialize() {
         // Get configuration from storage
         config = await StorageManager.getConfig();
         logDebug('Configuração carregada:', config);
+        
+        // Atualiza visibilidade do debug container com a configuração inicial
+        const debugContainer = document.getElementById('meet-auto-leave-debug');
+        if (debugContainer) {
+            debugContainer.style.display = config.showDebug ? 'block' : 'none';
+        }
+
+        // Setup message listener for debug toggle
+        chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+            if (message.type === 'TOGGLE_DEBUG') {
+                const container = getOrCreateDebugContainer();
+                container.style.display = message.data.showDebug ? 'block' : 'none';
+                sendResponse({ success: true });
+            }
+            return true;
+        });
         
         // Tenta entrar na reunião primeiro
         logDebug('Tentando entrar na reunião primeiro');

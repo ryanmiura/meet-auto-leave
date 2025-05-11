@@ -7,6 +7,7 @@ const scheduleForm = document.getElementById('scheduleForm');
 const configForm = document.getElementById('configForm');
 const status = document.getElementById('status');
 const meetingsList = document.getElementById('meetingsList');
+const showDebugToggle = document.getElementById('showDebug');
 
 // Elementos das abas
 const tabButtons = document.querySelectorAll('.tab-button');
@@ -40,6 +41,7 @@ async function initialize() {
         scheduleForm.addEventListener('submit', handleScheduleSubmit);
         configForm.addEventListener('submit', handleConfigSubmit);
         meetingsList.addEventListener('click', handleMeetingClick);
+        showDebugToggle.addEventListener('change', handleDebugToggle);
         
         // Event listeners das abas
         tabButtons.forEach(button => {
@@ -197,6 +199,7 @@ function populateConfigForm(config) {
     document.getElementById('minParticipants').value = config.minParticipants;
     document.getElementById('peakPercentage').value = config.peakPercentage;
     document.getElementById('autoReactThreshold').value = config.autoReactThreshold;
+    document.getElementById('showDebug').checked = config.showDebug;
 }
 
 function showStatus(message, type) {
@@ -283,4 +286,24 @@ function formatTimeFromNow(timestamp) {
     
     const days = Math.floor(hours / 24);
     return `em ${days} dia${days !== 1 ? 's' : ''}`;
+}
+
+// Handler para toggle de debug
+async function handleDebugToggle(event) {
+    try {
+        const config = await StorageManager.getConfig();
+        config.showDebug = event.target.checked;
+        await StorageManager.updateConfig(config);
+        
+        // Notifica a content script sobre a mudança
+        const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+        if (tab?.url?.includes('meet.google.com')) {
+            await chrome.tabs.sendMessage(tab.id, {
+                type: 'TOGGLE_DEBUG',
+                data: { showDebug: config.showDebug }
+            });
+        }
+    } catch (error) {
+        showStatus('Erro ao atualizar configuração de debug: ' + error.message, 'error');
+    }
 }

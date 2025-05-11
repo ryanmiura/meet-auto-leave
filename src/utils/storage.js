@@ -5,7 +5,8 @@ const DEFAULT_CONFIG = {
   timerDuration: 30,
   minParticipants: 2,
   peakPercentage: 10,
-  autoReactThreshold: 5
+  autoReactThreshold: 5,
+  showDebug: false
 };
 
 // Exporta diretamente no objeto window para uso em outros scripts
@@ -46,7 +47,8 @@ window.StorageManager = {
       timerDuration: Math.max(0, parseInt(newConfig.timerDuration) || DEFAULT_CONFIG.timerDuration),
       minParticipants: Math.max(1, parseInt(newConfig.minParticipants) || DEFAULT_CONFIG.minParticipants),
       peakPercentage: Math.min(100, Math.max(1, parseInt(newConfig.peakPercentage) || DEFAULT_CONFIG.peakPercentage)),
-      autoReactThreshold: Math.max(1, parseInt(newConfig.autoReactThreshold) || DEFAULT_CONFIG.autoReactThreshold)
+      autoReactThreshold: Math.max(1, parseInt(newConfig.autoReactThreshold) || DEFAULT_CONFIG.autoReactThreshold),
+      showDebug: Boolean(newConfig.showDebug)
     };
 
     await chrome.storage.sync.set({ config: sanitizedConfig });
