@@ -25,9 +25,9 @@ async function initialize() {
         //!* ID do input de data/hora definido no popup.html
         const meetTime = document.getElementById('meetTime');
         
-        // Configura data/hora mínima (próximo minuto)
+        // Configura data/hora mínima (momento atual)
         const now = new Date();
-        now.setMinutes(now.getMinutes() + 1, 0, 0); // Próximo minuto, zerando segundos
+        now.setSeconds(0); // Zera apenas os segundos
         
         // Converte para string local ISO
         const localISOString = new Date(now.getTime() - now.getTimezoneOffset() * 60000)
@@ -97,14 +97,14 @@ async function handleScheduleSubmit(event) {
         return;
     }
 
-    // Validar se a data/hora não é no passado ou menos de 1 minuto no futuro
+    // Validar se a data/hora não é no passado ou menos de 5 segundos no futuro
     if (selectedTime <= now) {
         showStatus('A data/hora deve ser no futuro', 'error');
         return;
     }
 
-    if (selectedTime - now < 60000) { // 60000ms = 1 minuto
-        showStatus('A reunião deve ser agendada para pelo menos 1 minuto no futuro', 'error');
+    if (selectedTime - now < 5000) { // 5000ms = 5 segundos
+        showStatus('A reunião deve ser agendada para pelo menos 30 segundos no futuro', 'error');
         return;
     }
 
@@ -127,10 +127,10 @@ async function handleScheduleSubmit(event) {
         showStatus('Reunião agendada com sucesso!', 'success');
         scheduleForm.reset();
         
-        // Reseta o campo de data/hora para o próximo minuto
-        const nextMinute = new Date();
-        nextMinute.setMinutes(nextMinute.getMinutes() + 1, 0, 0);
-        const nextLocalISOString = new Date(nextMinute.getTime() - nextMinute.getTimezoneOffset() * 60000)
+        // Reseta o campo de data/hora para o momento atual
+        const currentTime = new Date();
+        currentTime.setSeconds(0); // Zera apenas os segundos
+        const nextLocalISOString = new Date(currentTime.getTime() - currentTime.getTimezoneOffset() * 60000)
             .toISOString()
             .slice(0, 16);
         document.getElementById('meetTime').value = nextLocalISOString;
