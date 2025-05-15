@@ -179,15 +179,29 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
 
     try {
         const meetingData = JSON.parse(alarm.name);
-        logDebug('background', 'Abrindo reunião:', meetingData);
-        
-        // Cria nova aba com a URL do Meet
-        const tab = await chrome.tabs.create({ 
-            url: meetingData.url,
-            active: true
-        });
-        
-        logDebug('background', 'Aba criada:', tab);
+        logDebug('background', 'Verificando reunião:', meetingData);
+
+        // Verifica se a reunião ainda existe no storage
+        const meetings = await StorageManager.getMeetings(true);
+        const meetingExists = meetings.some(m =>
+            m.url === meetingData.url &&
+            m.time === meetingData.time &&
+            !m.completed
+        );
+
+        if (meetingExists) {
+            logDebug('background', 'Abrindo reunião:', meetingData);
+            // Cria nova aba com a URL do Meet
+            const tab = await chrome.tabs.create({
+                url: meetingData.url,
+                active: true
+            });
+            logDebug('background', 'Aba criada:', tab);
+        } else {
+            logDebug('background', 'Reunião não encontrada ou já removida, ignorando alarme');
+            // Remove o alarme para garantir
+            await chrome.alarms.clear(alarm.name);
+        }
     } catch (error) {
         logDebug('background', 'Erro ao processar alarme:', error);
     }
@@ -209,6 +223,9 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             break;
         case 'COMPLETE_MEETING':
             handleCompleteMeeting(message.data).then(sendResponse);
+            break;
+        case 'REMOVE_MEETING_ALARM':
+            handleRemoveMeetingAlarm(message.data).then(sendResponse);
             break;
         case 'DEBUG_LOG':
             // Mostra logs do content script
@@ -344,4 +361,22 @@ async function createAlarmForMeeting(meeting) {
     });
     
     logDebug('background', 'Alarme criado com sucesso:', alarmName);
+}
+
+// Handler para remover alarme de uma reunião
+async function handleRemoveMeetingAlarm(data) {
+    try {
+        const alarmName = JSON.stringify({
+            url: data.url,
+            time: data.time
+        });
+        
+        logDebug('background', 'Removendo alarme:', alarmName);
+        await chrome.alarms.clear(alarmName);
+        
+        return { success: true };
+    } catch (error) {
+        logDebug('background', 'Erro ao remover alarme:', error);
+        return { success: false, error: error.message };
+    }
 }

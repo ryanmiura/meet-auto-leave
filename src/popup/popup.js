@@ -175,6 +175,11 @@ async function handleMeetingClick(event) {
     try {
         const removed = await StorageManager.removeMeeting(meetingData.url, meetingData.time);
         if (removed) {
+            // Notifica o background para remover o alarme
+            await chrome.runtime.sendMessage({
+                type: 'REMOVE_MEETING_ALARM',
+                data: meetingData
+            });
             await updateMeetingsList();
             showStatus('Reunião removida com sucesso!', 'success');
         }
