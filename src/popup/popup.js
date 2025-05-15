@@ -265,6 +265,7 @@ function formatDateTime(date) {
         year: 'numeric',
         hour: '2-digit',
         minute: '2-digit',
+        second: '2-digit',
         hour12: false
     };
     return new Intl.DateTimeFormat('pt-BR', options).format(date);
@@ -273,10 +274,16 @@ function formatDateTime(date) {
 function formatTimeFromNow(timestamp) {
     const now = Date.now();
     const diff = timestamp - now;
-    const minutes = Math.floor(diff / 60000);
+    const seconds = Math.floor(diff / 1000);
     
+    if (seconds < 60) {
+        return `em ${seconds} segundo${seconds !== 1 ? 's' : ''}`;
+    }
+    
+    const minutes = Math.floor(seconds / 60);
     if (minutes < 60) {
-        return `em ${minutes} minuto${minutes !== 1 ? 's' : ''}`;
+        const remainingSeconds = seconds % 60;
+        return `em ${minutes} minuto${minutes !== 1 ? 's' : ''} e ${remainingSeconds} segundo${remainingSeconds !== 1 ? 's' : ''}`;
     }
     
     const hours = Math.floor(minutes / 60);
