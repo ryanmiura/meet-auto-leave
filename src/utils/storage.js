@@ -2,6 +2,7 @@
 
 // Configurações padrão
 const DEFAULT_CONFIG = {
+  exitMode: 'timer',
   timerDuration: 30,
   minParticipants: 2,
   peakPercentage: 10,
@@ -44,6 +45,9 @@ window.StorageManager = {
   async updateConfig(newConfig) {
     // Valida e sanitiza os valores
     const sanitizedConfig = {
+      exitMode: ['timer', 'participants', 'peak'].includes(newConfig.exitMode)
+        ? newConfig.exitMode
+        : DEFAULT_CONFIG.exitMode,
       timerDuration: Math.max(0, parseInt(newConfig.timerDuration) || DEFAULT_CONFIG.timerDuration),
       minParticipants: Math.max(1, parseInt(newConfig.minParticipants) || DEFAULT_CONFIG.minParticipants),
       peakPercentage: Math.min(100, Math.max(1, parseInt(newConfig.peakPercentage) || DEFAULT_CONFIG.peakPercentage)),

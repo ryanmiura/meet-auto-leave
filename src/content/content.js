@@ -423,10 +423,10 @@ async function checkParticipants(mutations) {
 }
 
 function startExitTimer() {
-    if (config.timerDuration > 0) {
+    if (config.exitMode === 'timer' && config.timerDuration > 0) {
         logDebug('Timer de saída iniciado:', config.timerDuration, 'minutos');
         exitTimer = setTimeout(() => {
-            exitMeeting('Timer expired');
+            exitMeeting('Timer expirou');
         }, config.timerDuration * 60 * 1000);
     }
 }
@@ -437,17 +437,23 @@ function setupReactionObserver() {
 
 async function checkExitConditions() {
     try {
-        if (participantCount <= config.minParticipants) {
-            logDebug('Condição de saída atingida: mínimo de participantes');
-            await exitMeeting('Minimum participants reached');
-            return;
-        }
+        switch (config.exitMode) {
+            case 'participants':
+                if (participantCount <= config.minParticipants) {
+                    logDebug('Condição de saída atingida: mínimo de participantes');
+                    await exitMeeting('Número mínimo de participantes atingido');
+                }
+                break;
 
-        const peakPercentage = (participantCount / peakParticipants) * 100;
-        if (peakPercentage <= config.peakPercentage) {
-            logDebug('Condição de saída atingida: porcentagem do pico');
-            await exitMeeting('Peak percentage threshold reached');
-            return;
+            case 'peak':
+                const peakPercentage = (participantCount / peakParticipants) * 100;
+                if (peakPercentage <= config.peakPercentage) {
+                    logDebug('Condição de saída atingida: porcentagem do pico');
+                    await exitMeeting('Porcentagem do pico atingida');
+                }
+                break;
+
+            // Caso 'timer' não precisa ser verificado aqui pois é gerenciado pelo startExitTimer
         }
     } catch (error) {
         logDebug('Erro ao verificar condições de saída:', error);

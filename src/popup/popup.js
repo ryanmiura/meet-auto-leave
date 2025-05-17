@@ -13,6 +13,27 @@ const showDebugToggle = document.getElementById('showDebug');
 const tabButtons = document.querySelectorAll('.tab-button');
 const tabContents = document.querySelectorAll('.tab-content');
 
+// Função para gerenciar a habilitação/desabilitação dos inputs
+function handleExitModeChange(event) {
+    const inputs = {
+        timer: document.getElementById('timerDuration'),
+        participants: document.getElementById('minParticipants'),
+        peak: document.getElementById('peakPercentage')
+    };
+
+    // Desabilita todos os inputs
+    Object.values(inputs).forEach(input => {
+        input.disabled = true;
+        input.value = '';
+    });
+
+    // Habilita apenas o input correspondente ao modo selecionado
+    const selectedMode = event.target.value;
+    if (selectedMode && inputs[selectedMode]) {
+        inputs[selectedMode].disabled = false;
+    }
+}
+
 async function initialize() {
     try {
         // Carregar configurações atuais
@@ -42,6 +63,12 @@ async function initialize() {
         configForm.addEventListener('submit', handleConfigSubmit);
         meetingsList.addEventListener('click', handleMeetingClick);
         showDebugToggle.addEventListener('change', handleDebugToggle);
+
+        // Adiciona listeners para os radio buttons
+        const exitModeRadios = document.querySelectorAll('input[name="exitMode"]');
+        exitModeRadios.forEach(radio => {
+            radio.addEventListener('change', handleExitModeChange);
+        });
         
         // Event listeners das abas
         tabButtons.forEach(button => {
@@ -145,13 +172,33 @@ async function handleScheduleSubmit(event) {
 async function handleConfigSubmit(event) {
     event.preventDefault();
 
+    const selectedMode = document.querySelector('input[name="exitMode"]:checked');
+    if (!selectedMode) {
+        showStatus('Por favor, selecione um método de saída', 'error');
+        return;
+    }
+
     //!* IDs dos campos do formulário de configuração definidos no popup.html
     const config = {
-        timerDuration: parseInt(document.getElementById('timerDuration').value) || 30,
-        minParticipants: parseInt(document.getElementById('minParticipants').value) || 2,
-        peakPercentage: parseInt(document.getElementById('peakPercentage').value) || 10,
+        exitMode: selectedMode.value,
+        timerDuration: 0,
+        minParticipants: 0,
+        peakPercentage: 0,
         autoReactThreshold: parseInt(document.getElementById('autoReactThreshold').value) || 5
     };
+
+    // Atualiza apenas o valor do modo selecionado
+    switch (selectedMode.value) {
+        case 'timer':
+            config.timerDuration = parseInt(document.getElementById('timerDuration').value) || 30;
+            break;
+        case 'participants':
+            config.minParticipants = parseInt(document.getElementById('minParticipants').value) || 2;
+            break;
+        case 'peak':
+            config.peakPercentage = parseInt(document.getElementById('peakPercentage').value) || 10;
+            break;
+    }
 
     try {
         await StorageManager.updateConfig(config);
@@ -200,11 +247,30 @@ function isValidMeetUrl(url) {
 
 function populateConfigForm(config) {
     //!* IDs dos campos do formulário de configuração definidos no popup.html
-    document.getElementById('timerDuration').value = config.timerDuration;
-    document.getElementById('minParticipants').value = config.minParticipants;
-    document.getElementById('peakPercentage').value = config.peakPercentage;
-    document.getElementById('autoReactThreshold').value = config.autoReactThreshold;
-    document.getElementById('showDebug').checked = config.showDebug;
+    const exitMode = config.exitMode || 'timer'; // Default para timer se não houver modo definido
+    
+    // Seleciona o radio button correto
+    const radio = document.getElementById(`${exitMode}Mode`);
+    if (radio) {
+        radio.checked = true;
+        handleExitModeChange({ target: radio }); // Simula o evento de mudança
+    }
+
+    // Preenche o valor correspondente ao modo selecionado
+    switch (exitMode) {
+        case 'timer':
+            document.getElementById('timerDuration').value = config.timerDuration || 30;
+            break;
+        case 'participants':
+            document.getElementById('minParticipants').value = config.minParticipants || 2;
+            break;
+        case 'peak':
+            document.getElementById('peakPercentage').value = config.peakPercentage || 10;
+            break;
+    }
+
+    document.getElementById('autoReactThreshold').value = config.autoReactThreshold || 5;
+    document.getElementById('showDebug').checked = config.showDebug || false;
 }
 
 function showStatus(message, type) {

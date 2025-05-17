@@ -57,27 +57,36 @@
                 <!--!* ID usado no JS: configForm - Form de configurações -->
                 <form id="configForm">
                     <div class="form-group">
-                        <label for="timerDuration">Sair após (minutos):</label>
-                        <!--!* ID usado no JS: timerDuration - Input de tempo para sair -->
-                        <input type="number" id="timerDuration" min="0" 
-                               placeholder="30">
-                        <small class="help-text">0 = desativado</small>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="minParticipants">Número mínimo de participantes:</label>
-                        <!--!* ID usado no JS: minParticipants - Input de mínimo de participantes -->
-                        <input type="number" id="minParticipants" min="1" 
-                               placeholder="2">
-                        <small class="help-text">Sair quando tiver menos que isso</small>
-                    </div>
+                        <label class="section-label">Selecione o método de saída automática:</label>
+                        
+                        <div class="radio-group">
+                            <div class="radio-option">
+                                <input type="radio" id="timerMode" name="exitMode" value="timer">
+                                <label for="timerMode">Por tempo</label>
+                                <div class="sub-option">
+                                    <input type="number" id="timerDuration" min="0" placeholder="30" disabled>
+                                    <small class="help-text">Sair após X minutos (0 = desativado)</small>
+                                </div>
+                            </div>
 
-                    <div class="form-group">
-                        <label for="peakPercentage">Porcentagem do pico para sair (%):</label>
-                        <!--!* ID usado no JS: peakPercentage - Input de porcentagem do pico -->
-                        <input type="number" id="peakPercentage" min="1" max="100" 
-                               placeholder="10">
-                        <small class="help-text">Sair quando cair para % do pico</small>
+                            <div class="radio-option">
+                                <input type="radio" id="participantsMode" name="exitMode" value="participants">
+                                <label for="participantsMode">Por número de participantes</label>
+                                <div class="sub-option">
+                                    <input type="number" id="minParticipants" min="1" placeholder="2" disabled>
+                                    <small class="help-text">Sair quando tiver menos que isso</small>
+                                </div>
+                            </div>
+
+                            <div class="radio-option">
+                                <input type="radio" id="peakMode" name="exitMode" value="peak">
+                                <label for="peakMode">Por porcentagem do pico</label>
+                                <div class="sub-option">
+                                    <input type="number" id="peakPercentage" min="1" max="100" placeholder="10" disabled>
+                                    <small class="help-text">Sair quando cair para % do pico</small>
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
                     <button type="submit" class="btn-primary">Salvar</button>

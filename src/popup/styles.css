@@ -399,3 +399,58 @@ input:checked + .toggle-slider:before {
 input:focus + .toggle-slider {
     box-shadow: 0 0 1px var(--primary-color);
 }
+
+/* Estilos para o grupo de radio buttons */
+.section-label {
+    font-weight: 500;
+    margin-bottom: 16px;
+}
+
+.radio-group {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.radio-option {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.radio-option input[type="radio"] {
+    width: auto;
+    margin-right: 8px;
+}
+
+.radio-option label {
+    display: inline-flex;
+    align-items: center;
+    margin-bottom: 0;
+    cursor: pointer;
+}
+
+.sub-option {
+    margin-left: 24px;
+    transition: opacity 0.3s, transform 0.3s;
+    opacity: 0.5;
+    transform: translateX(-10px);
+}
+
+.radio-option input[type="radio"]:checked ~ .sub-option {
+    opacity: 1;
+    transform: translateX(0);
+}
+
+.radio-option input[type="radio"]:checked ~ .sub-option input {
+    background-color: var(--bg-color);
+}
+
+.sub-option input[disabled] {
+    background-color: var(--tab-inactive);
+    cursor: not-allowed;
+}
+
+.radio-option:hover .sub-option input[disabled] {
+    border-color: var(--border-color);
+}
