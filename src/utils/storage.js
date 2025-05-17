@@ -7,7 +7,8 @@ const DEFAULT_CONFIG = {
   minParticipants: 2,
   peakPercentage: 10,
   autoReactThreshold: 5,
-  showDebug: false
+  showExitInfo: true, // Container de informações de saída ativado por padrão
+  showDebug: false    // Container de debug desativado por padrão
 };
 
 // Exporta diretamente no objeto window para uso em outros scripts
@@ -52,6 +53,7 @@ window.StorageManager = {
       minParticipants: Math.max(1, parseInt(newConfig.minParticipants) || DEFAULT_CONFIG.minParticipants),
       peakPercentage: Math.min(100, Math.max(1, parseInt(newConfig.peakPercentage) || DEFAULT_CONFIG.peakPercentage)),
       autoReactThreshold: Math.max(1, parseInt(newConfig.autoReactThreshold) || DEFAULT_CONFIG.autoReactThreshold),
+      showExitInfo: typeof newConfig.showExitInfo === 'boolean' ? newConfig.showExitInfo : DEFAULT_CONFIG.showExitInfo,
       showDebug: Boolean(newConfig.showDebug)
     };
 

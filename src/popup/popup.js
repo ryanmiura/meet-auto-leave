@@ -8,6 +8,7 @@ const configForm = document.getElementById('configForm');
 const status = document.getElementById('status');
 const meetingsList = document.getElementById('meetingsList');
 const showDebugToggle = document.getElementById('showDebug');
+const showExitInfoToggle = document.getElementById('showExitInfo');
 
 // Elementos das abas
 const tabButtons = document.querySelectorAll('.tab-button');
@@ -63,6 +64,7 @@ async function initialize() {
         configForm.addEventListener('submit', handleConfigSubmit);
         meetingsList.addEventListener('click', handleMeetingClick);
         showDebugToggle.addEventListener('change', handleDebugToggle);
+        showExitInfoToggle.addEventListener('change', handleExitInfoToggle);
 
         // Adiciona listeners para os radio buttons
         const exitModeRadios = document.querySelectorAll('input[name="exitMode"]');
@@ -271,6 +273,7 @@ function populateConfigForm(config) {
     }
 
     document.getElementById('autoReactThreshold').value = config.autoReactThreshold || 5;
+    document.getElementById('showExitInfo').checked = config.showExitInfo !== false; // true por padrão
     document.getElementById('showDebug').checked = config.showDebug || false;
 }
 
@@ -384,5 +387,25 @@ async function handleDebugToggle(event) {
         }
     } catch (error) {
         showStatus('Erro ao atualizar configuração de debug: ' + error.message, 'error');
+    }
+}
+
+// Handler para toggle de informações de saída
+async function handleExitInfoToggle(event) {
+    try {
+        const config = await StorageManager.getConfig();
+        config.showExitInfo = event.target.checked;
+        await StorageManager.updateConfig(config);
+        
+        // Notifica a content script sobre a mudança
+        const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+        if (tab?.url?.includes('meet.google.com')) {
+            await chrome.tabs.sendMessage(tab.id, {
+                type: 'TOGGLE_EXIT_INFO',
+                data: { showExitInfo: config.showExitInfo }
+            });
+        }
+    } catch (error) {
+        showStatus('Erro ao atualizar exibição das informações: ' + error.message, 'error');
     }
 }

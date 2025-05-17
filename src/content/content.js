@@ -55,6 +55,68 @@ function getOrCreateDebugContainer() {
     return container;
 }
 
+// Cria ou obtém o container de informações de saída
+function getOrCreateExitInfoContainer() {
+    let container = document.getElementById('meet-auto-leave-info');
+    if (!container) {
+        container = document.createElement('div');
+        container.id = 'meet-auto-leave-info';
+        // Define display inicial baseado na configuração
+        const initialDisplay = config?.showExitInfo !== false ? 'flex' : 'none';
+        Object.assign(container.style, {
+            position: 'fixed',
+            bottom: '20px',
+            left: '20px',
+            zIndex: '9999',
+            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+            color: 'white',
+            padding: '10px',
+            borderRadius: '5px',
+            fontSize: '14px',
+            fontFamily: 'Arial, sans-serif',
+            boxShadow: '0 2px 5px rgba(0, 0, 0, 0.2)',
+            display: initialDisplay,
+            flexDirection: 'column',
+            gap: '5px',
+            minWidth: '200px',
+            backdropFilter: 'blur(5px)',
+            border: '1px solid rgba(255, 255, 255, 0.1)'
+        });
+
+        // Adiciona título
+        const title = document.createElement('div');
+        title.style.fontWeight = 'bold';
+        title.style.marginBottom = '5px';
+        title.textContent = '🕒 Meet Auto Leave';
+        container.appendChild(title);
+
+        // Adiciona conteúdo
+        const content = document.createElement('div');
+        content.id = 'meet-auto-leave-info-content';
+        container.appendChild(content);
+
+        document.body.appendChild(container);
+    }
+    return container;
+}
+
+// Atualiza as informações de saída
+function updateExitInfo(timeLeft) {
+    const container = getOrCreateExitInfoContainer();
+    const content = container.querySelector('#meet-auto-leave-info-content');
+    
+    if (config.exitMode === 'timer') {
+        const minutes = Math.max(0, Math.floor(timeLeft / 60000));
+        const seconds = Math.max(0, Math.floor((timeLeft % 60000) / 1000));
+        content.innerHTML = `
+            <div style="opacity: 0.8">Modo: Saída por tempo</div>
+            <div style="font-size: 16px; font-weight: bold">
+                ${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}
+            </div>
+        `;
+    }
+}
+
 // State management
 let config = null;
 let participantCount = 0;
@@ -134,13 +196,20 @@ async function initialize() {
             debugContainer.style.display = config.showDebug ? 'block' : 'none';
         }
 
-        // Setup message listener for debug toggle
+        // Setup message listener for toggles
         chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-            if (message.type === 'TOGGLE_DEBUG') {
-                const container = getOrCreateDebugContainer();
-                container.style.display = message.data.showDebug ? 'block' : 'none';
-                sendResponse({ success: true });
+            switch (message.type) {
+                case 'TOGGLE_DEBUG':
+                    const debugContainer = getOrCreateDebugContainer();
+                    debugContainer.style.display = message.data.showDebug ? 'block' : 'none';
+                    break;
+                case 'TOGGLE_EXIT_INFO':
+                    const infoContainer = getOrCreateExitInfoContainer();
+                    infoContainer.style.display = message.data.showExitInfo ? 'flex' : 'none';
+                    config.showExitInfo = message.data.showExitInfo;
+                    break;
             }
+            sendResponse({ success: true });
             return true;
         });
         
@@ -511,6 +580,12 @@ function startExitTimer() {
         const timeInMs = config.timerDuration * 60 * 1000;
         const exitTime = new Date(Date.now() + timeInMs);
         
+        // Cria e/ou atualiza container de informações se estiver habilitado
+        if (config.showExitInfo !== false) {
+            const container = getOrCreateExitInfoContainer();
+            container.style.display = 'flex';
+        }
+        
         logDebug('Iniciando timer de saída:', {
             duracaoMinutos: config.timerDuration,
             horarioSaida: exitTime.toLocaleTimeString()
@@ -526,11 +601,15 @@ function startExitTimer() {
             exitMeeting('Timer expirou');
         }, timeInMs);
 
-        // Inicia verificação periódica do timer
+        // Inicia verificação periódica do timer e atualização do container
         checkTimerInterval = setInterval(() => {
-            const timeLeft = Math.round((exitTime - Date.now()) / 1000 / 60);
-            logDebug(`Timer de saída: ${timeLeft} minutos restantes`);
-        }, 60000); // Verifica a cada minuto
+            const timeLeft = exitTime - Date.now();
+            updateExitInfo(timeLeft);
+            logDebug(`Timer de saída: ${Math.round(timeLeft / 1000 / 60)} minutos restantes`);
+        }, 1000); // Atualiza a cada segundo para ter um timer mais suave
+
+        // Atualização inicial
+        updateExitInfo(timeInMs);
 
         return true;
     } else {
@@ -585,6 +664,12 @@ async function exitMeeting(reason) {
             logDebug('Limpando intervalo de verificação');
             clearInterval(checkTimerInterval);
             checkTimerInterval = null;
+        }
+
+        // Remove o container de informações
+        const infoContainer = document.getElementById('meet-auto-leave-info');
+        if (infoContainer) {
+            infoContainer.remove();
         }
 
         await sendChatMessage('Até mais');
