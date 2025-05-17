@@ -235,6 +235,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             // Executa clique nativo
             handleNativeClick(message.data, sender.tab.id).then(sendResponse);
             break;
+        case 'FORCE_CLOSE_TAB':
+            // Força o fechamento da aba quando a saída normal falha
+            handleForceCloseTab(sender.tab.id, message.data.reason).then(sendResponse);
+            break;
     }
     return true; // Mantém o canal de mensagem aberto para respostas assíncronas
 });
@@ -339,6 +343,28 @@ async function handleNativeClick(data, tabId) {
         try {
             await chrome.debugger.detach({ tabId });
         } catch {}
+        return { success: false, error: error.message };
+    }
+}
+
+// Handler para forçar o fechamento da aba
+async function handleForceCloseTab(tabId, reason) {
+    try {
+        logDebug('background', 'Forçando fechamento da aba:', { tabId, reason });
+        
+        // Completa a reunião antes de fechar
+        const tab = await chrome.tabs.get(tabId);
+        if (tab) {
+            await StorageManager.completeMeeting(tab.url, `Forçado: ${reason}`);
+        }
+        
+        // Fecha a aba
+        await chrome.tabs.remove(tabId);
+        logDebug('background', 'Aba fechada com sucesso');
+        
+        return { success: true };
+    } catch (error) {
+        logDebug('background', 'Erro ao forçar fechamento da aba:', error);
         return { success: false, error: error.message };
     }
 }

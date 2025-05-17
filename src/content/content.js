@@ -61,6 +61,7 @@ let participantCount = 0;
 let peakParticipants = 0;
 let joinTime = null;
 let exitTimer = null;
+let checkTimerInterval = null;
 let currentUrl = window.location.href;
 
 // Seletores para botões e controles
@@ -172,11 +173,18 @@ async function autoJoin() {
             const joined = await joinMeeting();
             if (joined) {
                 logDebug('Entrada bem sucedida na tentativa', attempt);
-                startExitTimer();
                 
                 // Aguarda 10 segundos para a interface carregar completamente
                 logDebug('Aguardando interface da reunião carregar...');
                 await new Promise(resolve => setTimeout(resolve, 10000));
+
+                // Inicia o timer de saída e verifica se foi iniciado com sucesso
+                const timerStarted = startExitTimer();
+                if (timerStarted) {
+                    logDebug('Timer de saída iniciado com sucesso');
+                } else {
+                    logDebug('Falha ao iniciar timer de saída - verifique as configurações');
+                }
                 
                 // Tenta enviar mensagem inicial
                 await sendInitialMessage();
@@ -500,10 +508,37 @@ async function checkParticipants(mutations) {
 
 function startExitTimer() {
     if (config.exitMode === 'timer' && config.timerDuration > 0) {
-        logDebug('Timer de saída iniciado:', config.timerDuration, 'minutos');
+        const timeInMs = config.timerDuration * 60 * 1000;
+        const exitTime = new Date(Date.now() + timeInMs);
+        
+        logDebug('Iniciando timer de saída:', {
+            duracaoMinutos: config.timerDuration,
+            horarioSaida: exitTime.toLocaleTimeString()
+        });
+
+        if (exitTimer) {
+            logDebug('Timer anterior encontrado, limpando...');
+            clearTimeout(exitTimer);
+        }
+
         exitTimer = setTimeout(() => {
+            logDebug('Timer de saída disparado');
             exitMeeting('Timer expirou');
-        }, config.timerDuration * 60 * 1000);
+        }, timeInMs);
+
+        // Inicia verificação periódica do timer
+        checkTimerInterval = setInterval(() => {
+            const timeLeft = Math.round((exitTime - Date.now()) / 1000 / 60);
+            logDebug(`Timer de saída: ${timeLeft} minutos restantes`);
+        }, 60000); // Verifica a cada minuto
+
+        return true;
+    } else {
+        logDebug('Timer não iniciado - Modo ou duração inválidos:', {
+            modo: config.exitMode,
+            duracao: config.timerDuration
+        });
+        return false;
     }
 }
 
@@ -539,6 +574,19 @@ async function checkExitConditions() {
 async function exitMeeting(reason) {
     logDebug('Iniciando processo de saída. Motivo:', reason);
     try {
+        // Limpa timers primeiro para evitar chamadas duplicadas
+        if (exitTimer) {
+            logDebug('Limpando timer de saída');
+            clearTimeout(exitTimer);
+            exitTimer = null;
+        }
+        
+        if (checkTimerInterval) {
+            logDebug('Limpando intervalo de verificação');
+            clearInterval(checkTimerInterval);
+            checkTimerInterval = null;
+        }
+
         await sendChatMessage('Até mais');
 
         await chrome.runtime.sendMessage({
@@ -551,18 +599,25 @@ async function exitMeeting(reason) {
 
         const leaveButton = await findElement(SELECTORS.LEAVE);
         if (leaveButton) {
-            await simulateClick(leaveButton);
-            logDebug('Saída da reunião bem sucedida');
+            const clicked = await simulateClick(leaveButton);
+            if (clicked) {
+                logDebug('Saída da reunião bem sucedida');
+            } else {
+                logDebug('Falha ao clicar no botão de saída');
+                throw new Error('Falha ao clicar no botão de saída');
+            }
         } else {
             logDebug('Botão de saída não encontrado');
-        }
-
-        if (exitTimer) {
-            clearTimeout(exitTimer);
+            throw new Error('Botão de saída não encontrado');
         }
 
     } catch (error) {
         logDebug('Erro ao sair da reunião:', error);
+        // Tenta forçar o fechamento da aba como fallback
+        chrome.runtime.sendMessage({
+            type: 'FORCE_CLOSE_TAB',
+            data: { reason: 'Falha ao sair normalmente: ' + error.message }
+        });
     }
 }
 
