@@ -66,33 +66,27 @@ let currentUrl = window.location.href;
 // Seletores para botões e controles
 const SELECTORS = {
     JOIN: [
-        // Exatos
-        '[jsname="Qx7uuf"]',          // Botão "Participar agora"
-        '[jsname="CQylAd"]',          // Container do botão
-        'div.CgwTDb button',          // Layout antigo
-        // Alternativos
-        '[role="button"]:has(span:contains("Participar agora"))',
-        'button:has(span:contains("Participar agora"))',
-        // Genéricos
-        '[role="button"]',
-        'button'
+        // Seletor específico do novo layout
+        'div[jsname="Qx7uuf"] button.UywwFc-LgbsSe',
+        // Seletor pelo texto específico
+        'button.UywwFc-LgbsSe span[jsname="V67aGc"]',
+        // Seletor mais genérico
+        'button.UywwFc-LgbsSe-OWXEXe-dgl2Hf',
+        // Fallback
+        'button:has(span[jsname="V67aGc"]:contains("Participar agora"))'
     ],
     CONTROLS: {
         MIC: {
             BUTTON: [
-                '[role="button"][data-is-muted]',
-                '[role="button"][aria-label*="microfone"]',
-                '[role="button"][aria-label*="mic"]'
-            ],
-            STATE: 'data-is-muted'
+                'div[jsname="hw0c9"][role="button"]',
+                '[role="button"][aria-label*="microfone"]'
+            ]
         },
         CAMERA: {
             BUTTON: [
-                '[role="button"][data-is-muted]',
-                '[role="button"][aria-label*="câmera"]',
-                '[role="button"][aria-label*="camera"]'
-            ],
-            STATE: 'data-is-muted'
+                'div[jsname="psRWwc"][role="button"]',
+                '[role="button"][aria-label*="câmera"]'
+            ]
         }
     },
     PARTICIPANTS: {
@@ -164,8 +158,13 @@ async function initialize() {
 async function autoJoin() {
     logDebug('Iniciando processo de entrada automática');
     try {
-        // Configura dispositivos primeiro
-        await configureDevices();
+        // Configura dispositivos primeiro e só continua se for bem sucedido
+        const devicesConfigured = await configureDevices();
+        if (!devicesConfigured) {
+            logDebug('Não foi possível configurar os dispositivos corretamente. Abortando entrada.');
+            return;
+        }
+        logDebug('Dispositivos configurados com sucesso. Prosseguindo com a entrada.');
         
         // Tenta encontrar e clicar no botão repetidamente
         for (let attempt = 1; attempt <= 5; attempt++) {
@@ -194,47 +193,127 @@ async function autoJoin() {
 
 async function configureDevices() {
     logDebug('Configurando dispositivos');
+    let micConfigured = false;
+    let cameraConfigured = false;
 
+    // Função auxiliar para verificar estado do dispositivo
+    const checkDeviceState = async (button, deviceName) => {
+        // Verifica múltiplos indicadores do estado
+        const isMuted = button.getAttribute('data-is-muted') === 'true';
+        const hasMutedClass = button.classList.contains('FTMc0c');
+        const ariaLabel = button.getAttribute('aria-label') || '';
+        const isActivatingLabel = ariaLabel.startsWith('Ativar');
+        
+        // Considera o dispositivo ativo se TODOS os indicadores mostrarem que está ativo
+        const isActive = !isMuted && !hasMutedClass && !isActivatingLabel;
+        
+        logDebug(`Estado do ${deviceName} após verificação:`, {
+            'data-is-muted': isMuted ? 'mutado' : 'ativo',
+            'classe FTMc0c': hasMutedClass ? 'presente (mutado)' : 'ausente (ativo)',
+            'aria-label': ariaLabel,
+            'estado final': isActive ? 'ativo' : 'desativado'
+        });
+        
+        return isActive;
+    };
+
+    // Função auxiliar para tentar desativar dispositivo
+    const tryDisableDevice = async (button, deviceName) => {
+        // Verifica estado inicial
+        const initialState = await checkDeviceState(button, deviceName);
+        if (!initialState) {
+            logDebug(`${deviceName} já está desativado`);
+            return true;
+        }
+
+        // Cria callback para verificar estado do dispositivo
+        const checkDeviceCallback = async () => {
+            const state = await checkDeviceState(button, deviceName);
+            // Retorna true se o dispositivo está desativado (estado desejado)
+            return !state;
+        };
+
+        // Tenta desativar usando os métodos de clique
+        const success = await clickWithAllMethods(button, checkDeviceCallback);
+        if (success) {
+            logDebug(`${deviceName} desativado com sucesso`);
+            return true;
+        } else {
+            logDebug(`Não foi possível desativar ${deviceName}`);
+            return false;
+        }
+    };
+
+    // Configura o microfone
     const micButton = await findElement(SELECTORS.CONTROLS.MIC.BUTTON);
     if (micButton) {
-        const isMuted = micButton.getAttribute(SELECTORS.CONTROLS.MIC.STATE) === 'true';
-        logDebug('Estado do microfone:', isMuted ? 'mutado' : 'ativo');
-        if (!isMuted) {
-            logDebug('Desativando microfone');
-            await simulateClick(micButton);
+        micConfigured = await tryDisableDevice(micButton, 'microfone');
+        if (!micConfigured) {
+            return false;
         }
+    } else {
+        logDebug('Botão do microfone não encontrado');
+        return false;
     }
 
+    // Configura a câmera
     const cameraButton = await findElement(SELECTORS.CONTROLS.CAMERA.BUTTON);
     if (cameraButton) {
-        const isMuted = cameraButton.getAttribute(SELECTORS.CONTROLS.CAMERA.STATE) === 'true';
-        logDebug('Estado da câmera:', isMuted ? 'mutada' : 'ativa');
-        if (!isMuted) {
-            logDebug('Desativando câmera');
-            await simulateClick(cameraButton);
+        cameraConfigured = await tryDisableDevice(cameraButton, 'câmera');
+        if (!cameraConfigured) {
+            return false;
         }
+    } else {
+        logDebug('Botão da câmera não encontrado');
+        return false;
     }
+
+    // Verificação final dupla
+    
+    const finalMicButton = await findElement(SELECTORS.CONTROLS.MIC.BUTTON);
+    const finalCameraButton = await findElement(SELECTORS.CONTROLS.CAMERA.BUTTON);
+    
+    const micFinalCheck = !await checkDeviceState(finalMicButton, 'microfone (verificação final)');
+    const cameraFinalCheck = !await checkDeviceState(finalCameraButton, 'câmera (verificação final)');
+
+    logDebug('Verificação final dos dispositivos:', {
+        microfone: micFinalCheck ? 'desativado' : 'ativo',
+        camera: cameraFinalCheck ? 'desativada' : 'ativa'
+    });
+
+    return micFinalCheck && cameraFinalCheck;
 }
 
 async function joinMeeting() {
     logDebug('Procurando botão de participar');
 
-    // Tenta encontrar o botão de várias formas
+    // Tenta encontrar o botão pelos seletores
     for (const selector of SELECTORS.JOIN) {
         logDebug('Tentando seletor:', selector);
         
-        const button = await waitForElement(selector, 5000);
-        if (!button) continue;
+        const element = await waitForElement(selector, 5000);
+        if (!element) continue;
 
-        // Verifica se o botão contém o texto correto
-        if (!button.textContent?.includes('Participar agora')) {
+        // Se encontramos o span, precisamos pegar o botão pai
+        const button = element.tagName.toLowerCase() === 'button'
+            ? element
+            : element.closest('button');
+
+        if (!button) {
+            logDebug('Botão pai não encontrado');
+            continue;
+        }
+
+        // Verifica se o botão tem o texto correto
+        const buttonText = button.querySelector('span[jsname="V67aGc"]')?.textContent;
+        if (buttonText !== 'Participar agora') {
             logDebug('Botão encontrado mas texto não corresponde');
             continue;
         }
 
         logDebug('Botão encontrado:', button);
 
-        // Tenta clicar usando diferentes métodos
+        // Tenta clicar
         if (await clickWithAllMethods(button)) {
             logDebug('Clique bem sucedido');
             joinTime = Date.now();
@@ -242,89 +321,86 @@ async function joinMeeting() {
         }
     }
 
-    // Se não encontrou pelos seletores, tenta encontrar por texto
-    const elements = document.querySelectorAll('*');
-    for (const element of elements) {
-        if (element.textContent?.includes('Participar agora')) {
-            logDebug('Encontrou elemento por texto:', element);
-            if (await clickWithAllMethods(element)) {
-                logDebug('Clique bem sucedido');
-                joinTime = Date.now();
-                return true;
-            }
-        }
-    }
-
     logDebug('Botão não encontrado ou clique não funcionou');
     return false;
 }
 
-async function clickWithAllMethods(element) {
-    // Métodos de clique em ordem de preferência
-    const methods = [
-        {
-            name: 'native click',
-            fn: async () => {
-                const rect = element.getBoundingClientRect();
-                const response = await chrome.runtime.sendMessage({
-                    type: 'NATIVE_CLICK',
-                    data: {
-                        x: Math.round(rect.left + rect.width / 2),
-                        y: Math.round(rect.top + rect.height / 2)
-                    }
-                });
-                return response?.success;
+// Função para clique direto
+async function tryDirectClick(element) {
+    try {
+        logDebug('Tentando clique direto');
+        element.click();
+        return true;
+    } catch (error) {
+        logDebug('Erro no clique direto:', error);
+        return false;
+    }
+}
+
+// Função para clique nativo
+async function tryNativeClick(element) {
+    try {
+        logDebug('Tentando clique nativo');
+        const rect = element.getBoundingClientRect();
+        const response = await chrome.runtime.sendMessage({
+            type: 'NATIVE_CLICK',
+            data: {
+                x: Math.round(rect.left + rect.width / 2),
+                y: Math.round(rect.top + rect.height / 2)
             }
-        },
-        {
-            name: 'direct click',
-            fn: () => {
-                element.click();
-                return true;
-            }
-        },
-        {
-            name: 'mouse events',
-            fn: () => {
-                ['mouseover', 'mousedown', 'mouseup', 'click'].forEach(type => {
-                    element.dispatchEvent(new MouseEvent(type, {
-                        bubbles: true,
-                        cancelable: true,
-                        view: window
-                    }));
-                });
-                return true;
-            }
-        }
+        });
+        return response?.success || false;
+    } catch (error) {
+        logDebug('Erro no clique nativo:', error);
+        return false;
+    }
+}
+
+// Função para eventos de mouse
+async function tryMouseEvents(element) {
+    try {
+        logDebug('Tentando eventos de mouse');
+        ['mouseover', 'mousedown', 'mouseup', 'click'].forEach(type => {
+            element.dispatchEvent(new MouseEvent(type, {
+                bubbles: true,
+                cancelable: true,
+                view: window
+            }));
+        });
+        return true;
+    } catch (error) {
+        logDebug('Erro nos eventos de mouse:', error);
+        return false;
+    }
+}
+
+async function clickWithAllMethods(element, checkStateCallback) {
+    // Array com todas as funções de clique
+    const clickMethods = [
+        tryDirectClick,
+        tryNativeClick,
+        tryMouseEvents
     ];
 
-    for (const method of methods) {
-        try {
-            logDebug(`Tentando método de clique: ${method.name}`);
-            await method.fn();
+    // Tenta cada método até um funcionar
+    for (const method of clickMethods) {
+        const clicked = await method(element);
+        if (!clicked) {
+            logDebug('Método de clique falhou, tentando próximo...');
+            continue;
+        }
 
-            // Verifica se o botão desapareceu
-            const disappeared = await new Promise(resolve => {
-                let attempts = 0;
-                const check = () => {
-                    attempts++;
-                    if (!document.body.contains(element)) {
-                        resolve(true);
-                    } else if (attempts >= 10) { // 2 segundos
-                        resolve(false);
-                    } else {
-                        setTimeout(check, 200);
-                    }
-                };
-                check();
-            });
-
-            if (disappeared) {
-                logDebug(`Clique bem sucedido com método: ${method.name}`);
+        // Se tiver callback para verificar estado, aguarda e verifica
+        if (checkStateCallback) {
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            const state = await checkStateCallback();
+            if (state) {
+                logDebug('Clique bem sucedido e estado verificado');
                 return true;
             }
-        } catch (error) {
-            logDebug(`Erro no método ${method.name}:`, error);
+            logDebug('Estado não está correto após clique, tentando próximo método...');
+        } else {
+            return true;
         }
     }
 
