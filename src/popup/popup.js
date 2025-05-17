@@ -203,6 +203,7 @@ async function handleConfigSubmit(event) {
     try {
         await StorageManager.updateConfig(config);
         showStatus('Configurações salvas com sucesso!', 'success');
+        window.close();
     } catch (error) {
         showStatus('Erro ao salvar configurações: ' + error.message, 'error');
     }
