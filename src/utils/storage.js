@@ -7,8 +7,9 @@ const DEFAULT_CONFIG = {
   minParticipants: 2,
   peakPercentage: 10,
   autoReactThreshold: 5,
-  showExitInfo: true, // Container de informações de saída ativado por padrão
-  showDebug: false    // Container de debug desativado por padrão
+  showExitInfo: true,     // Container de informações de saída ativado por padrão
+  showDebug: false,       // Container de debug desativado por padrão
+  autoExitEnabled: true   // Saída automática ativada por padrão
 };
 
 // Exporta diretamente no objeto window para uso em outros scripts
@@ -54,7 +55,8 @@ window.StorageManager = {
       peakPercentage: Math.min(100, Math.max(1, parseInt(newConfig.peakPercentage) || DEFAULT_CONFIG.peakPercentage)),
       autoReactThreshold: Math.max(1, parseInt(newConfig.autoReactThreshold) || DEFAULT_CONFIG.autoReactThreshold),
       showExitInfo: typeof newConfig.showExitInfo === 'boolean' ? newConfig.showExitInfo : DEFAULT_CONFIG.showExitInfo,
-      showDebug: Boolean(newConfig.showDebug)
+      showDebug: Boolean(newConfig.showDebug),
+      autoExitEnabled: typeof newConfig.autoExitEnabled === 'boolean' ? newConfig.autoExitEnabled : DEFAULT_CONFIG.autoExitEnabled
     };
 
     await chrome.storage.sync.set({ config: sanitizedConfig });

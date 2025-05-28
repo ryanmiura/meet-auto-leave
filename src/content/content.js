@@ -102,19 +102,38 @@ function getOrCreateExitInfoContainer() {
 
 // Atualiza as informações de saída
 function updateExitInfo(timeLeft) {
+    // Se saída automática estiver desativada ou modo não for timer,
+    // remove o container se existir e retorna
+    if (!config.autoExitEnabled || config.exitMode !== 'timer') {
+        const container = document.getElementById('meet-auto-leave-info');
+        if (container) {
+            container.remove();
+        }
+        return;
+    }
+
+    // Se container não deve ser mostrado, remove e retorna
+    if (config.showExitInfo === false) {
+        const container = document.getElementById('meet-auto-leave-info');
+        if (container) {
+            container.remove();
+        }
+        return;
+    }
+
     const container = getOrCreateExitInfoContainer();
     const content = container.querySelector('#meet-auto-leave-info-content');
-    
-    if (config.exitMode === 'timer') {
-        const minutes = Math.max(0, Math.floor(timeLeft / 60000));
-        const seconds = Math.max(0, Math.floor((timeLeft % 60000) / 1000));
-        content.innerHTML = `
-            <div style="opacity: 0.8">Modo: Saída por tempo</div>
-            <div style="font-size: 16px; font-weight: bold">
-                ${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}
-            </div>
-        `;
-    }
+
+    // Atualiza o conteúdo do container
+    const minutes = Math.max(0, Math.floor(timeLeft / 60000));
+    const seconds = Math.max(0, Math.floor((timeLeft % 60000) / 1000));
+    content.innerHTML = `
+        <div style="opacity: 0.8">Modo: Saída por tempo</div>
+        <div style="font-size: 16px; font-weight: bold">
+            ${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}
+        </div>
+    `;
+    container.style.display = 'flex';
 }
 
 // State management
@@ -202,11 +221,65 @@ async function initialize() {
                 case 'TOGGLE_DEBUG':
                     const debugContainer = getOrCreateDebugContainer();
                     debugContainer.style.display = message.data.showDebug ? 'block' : 'none';
+                    config.showDebug = message.data.showDebug;
                     break;
                 case 'TOGGLE_EXIT_INFO':
                     const infoContainer = getOrCreateExitInfoContainer();
                     infoContainer.style.display = message.data.showExitInfo ? 'flex' : 'none';
                     config.showExitInfo = message.data.showExitInfo;
+                    break;
+                case 'TOGGLE_AUTO_EXIT':
+                    config.autoExitEnabled = message.data.autoExitEnabled;
+                    logDebug('Saída automática ' + (config.autoExitEnabled ? 'ativada' : 'desativada'));
+                    
+                    // Se desativado, limpa timers e remove container
+                    if (!config.autoExitEnabled) {
+                        // Limpa timers
+                        if (exitTimer) {
+                            clearTimeout(exitTimer);
+                            exitTimer = null;
+                        }
+                        if (checkTimerInterval) {
+                            clearInterval(checkTimerInterval);
+                            checkTimerInterval = null;
+                        }
+                        
+                        // Remove container
+                        const container = document.getElementById('meet-auto-leave-info');
+                        if (container) {
+                            container.remove();
+                        }
+                    } else if (config.exitMode === 'timer' && config.timerDuration > 0) {
+                        // Se ativado e modo timer, reinicia o timer
+                        startExitTimer();
+                    }
+                    break;
+                case 'CONFIG_UPDATED':
+                    // Atualiza configuração local
+                    config = message.data.config;
+                    logDebug('Configurações atualizadas:', config);
+                    
+                    // Se estiver no modo timer e estiver ativado, reinicia o timer
+                    if (config.autoExitEnabled && config.exitMode === 'timer') {
+                        // Limpa timers existentes
+                        if (exitTimer) {
+                            clearTimeout(exitTimer);
+                            exitTimer = null;
+                        }
+                        if (checkTimerInterval) {
+                            clearInterval(checkTimerInterval);
+                            checkTimerInterval = null;
+                        }
+                        
+                        // Inicia novo timer
+                        startExitTimer();
+                    } else {
+                        // Remove container se não estiver no modo timer
+                        const container = document.getElementById('meet-auto-leave-info');
+                        if (container) {
+                            container.remove();
+                        }
+                    }
                     break;
             }
             sendResponse({ success: true });
@@ -576,15 +649,14 @@ async function checkParticipants(mutations) {
 }
 
 function startExitTimer() {
+    if (!config.autoExitEnabled) {
+        logDebug('Timer não iniciado - Saída automática desativada');
+        return false;
+    }
+
     if (config.exitMode === 'timer' && config.timerDuration > 0) {
         const timeInMs = config.timerDuration * 60 * 1000;
         const exitTime = new Date(Date.now() + timeInMs);
-        
-        // Cria e/ou atualiza container de informações se estiver habilitado
-        if (config.showExitInfo !== false) {
-            const container = getOrCreateExitInfoContainer();
-            container.style.display = 'flex';
-        }
         
         logDebug('Iniciando timer de saída:', {
             duracaoMinutos: config.timerDuration,
@@ -600,6 +672,12 @@ function startExitTimer() {
             logDebug('Timer de saída disparado');
             exitMeeting('Timer expirou');
         }, timeInMs);
+
+        // Limpa intervalos anteriores se existirem
+        if (checkTimerInterval) {
+            clearInterval(checkTimerInterval);
+            checkTimerInterval = null;
+        }
 
         // Inicia verificação periódica do timer e atualização do container
         checkTimerInterval = setInterval(() => {
@@ -627,6 +705,10 @@ function setupReactionObserver() {
 
 async function checkExitConditions() {
     try {
+        if (!config.autoExitEnabled) {
+            return;
+        }
+
         switch (config.exitMode) {
             case 'participants':
                 if (participantCount <= config.minParticipants) {

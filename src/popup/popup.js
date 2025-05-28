@@ -9,6 +9,7 @@ const status = document.getElementById('status');
 const meetingsList = document.getElementById('meetingsList');
 const showDebugToggle = document.getElementById('showDebug');
 const showExitInfoToggle = document.getElementById('showExitInfo');
+const autoExitToggle = document.getElementById('autoExitEnabled');
 
 // Elementos das abas
 const tabButtons = document.querySelectorAll('.tab-button');
@@ -65,6 +66,7 @@ async function initialize() {
         meetingsList.addEventListener('click', handleMeetingClick);
         showDebugToggle.addEventListener('change', handleDebugToggle);
         showExitInfoToggle.addEventListener('change', handleExitInfoToggle);
+        autoExitToggle.addEventListener('change', handleAutoExitToggle);
 
         // Adiciona listeners para os radio buttons
         const exitModeRadios = document.querySelectorAll('input[name="exitMode"]');
@@ -171,8 +173,41 @@ async function handleScheduleSubmit(event) {
     }
 }
 
+function updateExitOptionsVisibility(enabled) {
+    // Elementos a serem controlados
+    const radioGroup = document.querySelector('.radio-group');
+    const saveButton = document.getElementById('configForm').querySelector('button[type="submit"]');
+
+    if (enabled) {
+        // Mostra opções
+        radioGroup.style.display = 'block';
+        saveButton.style.display = 'block';
+    } else {
+        // Esconde opções e limpa seleções
+        radioGroup.style.display = 'none';
+        saveButton.style.display = 'none';
+        
+        // Desmarca todos os radio buttons
+        document.querySelectorAll('input[name="exitMode"]').forEach(radio => {
+            radio.checked = false;
+        });
+
+        // Limpa e desabilita todos os inputs
+        ['timerDuration', 'minParticipants', 'peakPercentage'].forEach(id => {
+            const input = document.getElementById(id);
+            input.value = '';
+            input.disabled = true;
+        });
+    }
+}
+
 async function handleConfigSubmit(event) {
     event.preventDefault();
+
+    if (!document.getElementById('autoExitEnabled').checked) {
+        showStatus('Ative a saída automática primeiro', 'error');
+        return;
+    }
 
     const selectedMode = document.querySelector('input[name="exitMode"]:checked');
     if (!selectedMode) {
@@ -182,7 +217,8 @@ async function handleConfigSubmit(event) {
 
     //!* IDs dos campos do formulário de configuração definidos no popup.html
     const config = {
-        exitMode: selectedMode.value,
+        autoExitEnabled: document.getElementById('autoExitEnabled').checked,
+        exitMode: selectedMode?.value || 'timer', // Valor padrão se nenhum selecionado
         timerDuration: 0,
         minParticipants: 0,
         peakPercentage: 0,
@@ -204,6 +240,16 @@ async function handleConfigSubmit(event) {
 
     try {
         await StorageManager.updateConfig(config);
+        
+        // Notifica a content script sobre a atualização de configuração
+        const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+        if (tab?.url?.includes('meet.google.com')) {
+            await chrome.tabs.sendMessage(tab.id, {
+                type: 'CONFIG_UPDATED',
+                data: { config }
+            });
+        }
+
         showStatus('Configurações salvas com sucesso!', 'success');
         window.close();
     } catch (error) {
@@ -273,8 +319,12 @@ function populateConfigForm(config) {
     }
 
     document.getElementById('autoReactThreshold').value = config.autoReactThreshold || 5;
+    document.getElementById('autoExitEnabled').checked = config.autoExitEnabled !== false; // true por padrão
     document.getElementById('showExitInfo').checked = config.showExitInfo !== false; // true por padrão
     document.getElementById('showDebug').checked = config.showDebug || false;
+    
+    // Atualiza visibilidade inicial das opções
+    updateExitOptionsVisibility(config.autoExitEnabled !== false);
 }
 
 function showStatus(message, type) {
@@ -407,5 +457,45 @@ async function handleExitInfoToggle(event) {
         }
     } catch (error) {
         showStatus('Erro ao atualizar exibição das informações: ' + error.message, 'error');
+    }
+}
+
+// Handler para toggle de saída automática
+async function handleAutoExitToggle(event) {
+    try {
+        const config = await StorageManager.getConfig();
+        const enabled = event.target.checked;
+        
+        // Atualiza visibilidade das opções
+        updateExitOptionsVisibility(enabled);
+
+        // Se desativado, reseta as configurações
+        if (!enabled) {
+            config.exitMode = 'timer';
+            config.timerDuration = 0;
+            config.minParticipants = 0;
+            config.peakPercentage = 0;
+        }
+
+        config.autoExitEnabled = enabled;
+        await StorageManager.updateConfig(config);
+        
+        // Notifica a content script sobre a mudança
+        const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+        if (tab?.url?.includes('meet.google.com')) {
+            await chrome.tabs.sendMessage(tab.id, {
+                type: 'TOGGLE_AUTO_EXIT',
+                data: { autoExitEnabled: enabled }
+            });
+        }
+        
+        showStatus(
+            enabled
+                ? 'Saída automática ativada'
+                : 'Saída automática desativada',
+            'success'
+        );
+    } catch (error) {
+        showStatus('Erro ao atualizar saída automática: ' + error.message, 'error');
     }
 }
