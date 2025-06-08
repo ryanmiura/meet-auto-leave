@@ -61,33 +61,14 @@ function getOrCreateExitInfoContainer() {
     if (!container) {
         container = document.createElement('div');
         container.id = 'meet-auto-leave-info';
+        
         // Define display inicial baseado na configuração
-        const initialDisplay = config?.showExitInfo !== false ? 'flex' : 'none';
-        Object.assign(container.style, {
-            position: 'fixed',
-            bottom: '20px',
-            left: '20px',
-            zIndex: '9999',
-            backgroundColor: 'rgba(0, 0, 0, 0.8)',
-            color: 'white',
-            padding: '10px',
-            borderRadius: '5px',
-            fontSize: '14px',
-            fontFamily: 'Arial, sans-serif',
-            boxShadow: '0 2px 5px rgba(0, 0, 0, 0.2)',
-            display: initialDisplay,
-            flexDirection: 'column',
-            gap: '5px',
-            minWidth: '200px',
-            backdropFilter: 'blur(5px)',
-            border: '1px solid rgba(255, 255, 255, 0.1)'
-        });
+        container.style.display = config?.showExitInfo !== false ? 'flex' : 'none';
 
         // Adiciona título
         const title = document.createElement('div');
-        title.style.fontWeight = 'bold';
-        title.style.marginBottom = '5px';
-        title.textContent = '🕒 Meet Auto Leave';
+        title.className = 'info-title';
+        title.textContent = 'Meet Auto Leave';
         container.appendChild(title);
 
         // Adiciona conteúdo
@@ -101,39 +82,151 @@ function getOrCreateExitInfoContainer() {
 }
 
 // Atualiza as informações de saída
-function updateExitInfo(timeLeft) {
-    // Se saída automática estiver desativada ou modo não for timer,
-    // remove o container se existir e retorna
-    if (!config.autoExitEnabled || config.exitMode !== 'timer') {
-        const container = document.getElementById('meet-auto-leave-info');
-        if (container) {
-            container.remove();
+function updateExitInfo(timeLeft = null) {
+    try {
+        // Verifica se deve mostrar o container
+        if (!config?.autoExitEnabled || config?.showExitInfo === false) {
+            const container = document.getElementById('meet-auto-leave-info');
+            if (container) {
+                container.remove();
+            }
+            return;
         }
-        return;
-    }
 
-    // Se container não deve ser mostrado, remove e retorna
-    if (config.showExitInfo === false) {
-        const container = document.getElementById('meet-auto-leave-info');
-        if (container) {
-            container.remove();
+        const container = getOrCreateExitInfoContainer();
+        const content = container.querySelector('#meet-auto-leave-info-content');
+        if (!content) {
+            logDebug('Erro: Container de conteúdo não encontrado');
+            return;
         }
-        return;
+
+        // Define o conteúdo baseado no modo de saída
+        switch(config.exitMode) {
+            case 'timer':
+                if (typeof timeLeft !== 'number') {
+                    logDebug('Aviso: timeLeft não especificado para modo timer');
+                    return;
+                }
+                updateTimerInfo(content, timeLeft);
+                break;
+            case 'participants':
+                if (typeof participantCount !== 'number' || typeof config.minParticipants !== 'number') {
+                    logDebug('Erro: dados de participantes inválidos', {
+                        participantCount,
+                        minParticipants: config.minParticipants
+                    });
+                    return;
+                }
+                updateParticipantsInfo(content);
+                break;
+            case 'peak':
+                if (typeof participantCount !== 'number' || typeof peakParticipants !== 'number') {
+                    logDebug('Erro: dados de pico inválidos', {
+                        participantCount,
+                        peakParticipants
+                    });
+                    return;
+                }
+                updatePeakInfo(content);
+                break;
+            default:
+                logDebug('Modo de saída inválido:', config.exitMode);
+                return;
+        }
+
+        container.style.display = 'flex';
+        logDebug('Container atualizado:', {
+            modo: config.exitMode,
+            participantes: participantCount,
+            pico: peakParticipants
+        });
+    } catch (error) {
+        logDebug('Erro ao atualizar container:', error);
     }
+}
 
-    const container = getOrCreateExitInfoContainer();
-    const content = container.querySelector('#meet-auto-leave-info-content');
+function updateTimerInfo(content, timeLeft) {
+    try {
+        const minutes = Math.max(0, Math.floor(timeLeft / 60000));
+        const seconds = Math.max(0, Math.floor((timeLeft % 60000) / 1000));
+        const isWarning = minutes === 0 && seconds <= 60;
+        const isAlert = minutes === 0 && seconds <= 30;
 
-    // Atualiza o conteúdo do container
-    const minutes = Math.max(0, Math.floor(timeLeft / 60000));
-    const seconds = Math.max(0, Math.floor((timeLeft % 60000) / 1000));
-    content.innerHTML = `
-        <div style="opacity: 0.8">Modo: Saída por tempo</div>
-        <div style="font-size: 16px; font-weight: bold">
-            ${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}
-        </div>
-    `;
-    container.style.display = 'flex';
+        const template = `
+            <div class="exit-mode">Modo: Saída por tempo</div>
+            <div class="mode-timer">
+                <div class="countdown ${isAlert ? 'alert-state' : isWarning ? 'warning-state' : ''}">
+                    ${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}
+                </div>
+            </div>
+        `;
+
+        content.innerHTML = template;
+    } catch (error) {
+        logDebug('Erro ao atualizar timer:', error);
+    }
+}
+
+function updateParticipantsInfo(content) {
+    try {
+        const difference = participantCount - config.minParticipants;
+        const isWarning = difference <= 2 && difference > 0;
+        const isAlert = difference <= 0;
+
+        const template = `
+            <div class="exit-mode">Modo: Saída por participantes</div>
+            <div class="mode-participants">
+                <div class="info-grid ${isAlert ? 'alert-state' : isWarning ? 'warning-state' : ''}">
+                    <div>Atual: <span class="highlight">${participantCount}</span></div>
+                    <div>Mínimo: ${config.minParticipants}</div>
+                    <div>Diferença: ${difference}</div>
+                </div>
+            </div>
+        `;
+
+        content.innerHTML = template;
+        logDebug('Info de participantes atualizada:', {
+            atual: participantCount,
+            minimo: config.minParticipants,
+            diferenca: difference,
+            estado: isAlert ? 'alerta' : isWarning ? 'aviso' : 'normal'
+        });
+    } catch (error) {
+        logDebug('Erro ao atualizar info de participantes:', error);
+    }
+}
+
+function updatePeakInfo(content) {
+    try {
+        const currentPercentage = (participantCount / peakParticipants) * 100;
+        const exitNumber = Math.ceil(peakParticipants * (config.peakPercentage / 100));
+        const isWarning = currentPercentage <= config.peakPercentage + 5;
+        const isAlert = currentPercentage <= config.peakPercentage;
+
+        const template = `
+            <div class="exit-mode">Modo: Saída por pico</div>
+            <div class="mode-peak">
+                <div class="info-grid ${isAlert ? 'alert-state' : isWarning ? 'warning-state' : ''}">
+                    <div>Pico: <span class="highlight">${peakParticipants}</span></div>
+                    <div>Atual: ${participantCount}</div>
+                    <div>Meta: ${config.peakPercentage}%</div>
+                    <div>Sair em: ${exitNumber}</div>
+                </div>
+            </div>
+        `;
+
+        content.innerHTML = template;
+        logDebug('Info de pico atualizada:', {
+            pico: peakParticipants,
+            atual: participantCount,
+            porcentagem: currentPercentage.toFixed(1) + '%',
+            meta: config.peakPercentage + '%',
+            sairEm: exitNumber,
+            estado: isAlert ? 'alerta' : isWarning ? 'aviso' : 'normal'
+        });
+    } catch (error) {
+        logDebug('Erro ao atualizar info de pico:', error);
+    }
 }
 
 // State management
@@ -205,15 +298,24 @@ setTimeout(() => {
 async function initialize() {
     logDebug('Content script inicializado');
     try {
-        // Get configuration from storage
+        // Carrega configuração do storage
         config = await StorageManager.getConfig();
-        logDebug('Configuração carregada:', config);
+        logDebug('Configuração carregada:', {
+            modo: config.exitMode,
+            ativo: config.autoExitEnabled,
+            showDebug: config.showDebug,
+            showExitInfo: config.showExitInfo
+        });
         
         // Atualiza visibilidade do debug container com a configuração inicial
         const debugContainer = document.getElementById('meet-auto-leave-debug');
         if (debugContainer) {
             debugContainer.style.display = config.showDebug ? 'block' : 'none';
         }
+
+        // Inicializa o contador de participantes e pico
+        participantCount = 0;
+        peakParticipants = 0;
 
         // Setup message listener for toggles
         chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
@@ -249,32 +351,35 @@ async function initialize() {
                         if (container) {
                             container.remove();
                         }
-                    } else if (config.exitMode === 'timer' && config.timerDuration > 0) {
-                        // Se ativado e modo timer, reinicia o timer
+                    } else {
+                        // Se ativado, inicia o sistema para qualquer modo
                         startExitTimer();
                     }
                     break;
                 case 'CONFIG_UPDATED':
-                    // Atualiza configuração local
+                    const oldConfig = { ...config };
                     config = message.data.config;
-                    logDebug('Configurações atualizadas:', config);
-                    
-                    // Se estiver no modo timer e estiver ativado, reinicia o timer
-                    if (config.autoExitEnabled && config.exitMode === 'timer') {
-                        // Limpa timers existentes
-                        if (exitTimer) {
-                            clearTimeout(exitTimer);
-                            exitTimer = null;
-                        }
-                        if (checkTimerInterval) {
-                            clearInterval(checkTimerInterval);
-                            checkTimerInterval = null;
-                        }
-                        
-                        // Inicia novo timer
+                    logDebug('Configurações atualizadas:', {
+                        modoAnterior: oldConfig.exitMode,
+                        modoNovo: config.exitMode,
+                        ativo: config.autoExitEnabled
+                    });
+
+                    // Limpa timers existentes
+                    if (exitTimer) {
+                        clearTimeout(exitTimer);
+                        exitTimer = null;
+                    }
+                    if (checkTimerInterval) {
+                        clearInterval(checkTimerInterval);
+                        checkTimerInterval = null;
+                    }
+
+                    // Se a saída automática estiver ativada, inicia o sistema
+                    if (config.autoExitEnabled) {
                         startExitTimer();
                     } else {
-                        // Remove container se não estiver no modo timer
+                        // Remove container se saída automática estiver desativada
                         const container = document.getElementById('meet-auto-leave-info');
                         if (container) {
                             container.remove();
@@ -320,12 +425,19 @@ async function autoJoin() {
                 logDebug('Aguardando interface da reunião carregar...');
                 await new Promise(resolve => setTimeout(resolve, 10000));
 
-                // Inicia o timer de saída e verifica se foi iniciado com sucesso
-                const timerStarted = startExitTimer();
-                if (timerStarted) {
-                    logDebug('Timer de saída iniciado com sucesso');
+                // Inicia o sistema de saída se estiver ativado
+                if (config.autoExitEnabled) {
+                    const exitSystemStarted = startExitTimer();
+                    if (exitSystemStarted) {
+                        logDebug('Sistema de saída iniciado com sucesso:', {
+                            modo: config.exitMode,
+                            container: document.getElementById('meet-auto-leave-info') ? 'presente' : 'ausente'
+                        });
+                    } else {
+                        logDebug('Falha ao iniciar sistema de saída - verifique as configurações');
+                    }
                 } else {
-                    logDebug('Falha ao iniciar timer de saída - verifique as configurações');
+                    logDebug('Sistema de saída não iniciado - desativado nas configurações');
                 }
                 
                 // Tenta enviar mensagem inicial
@@ -605,14 +717,34 @@ function setupParticipantObserver() {
     const observer = new MutationObserver(checkParticipants);
     
     for (const selector of SELECTORS.PARTICIPANTS.COUNTER) {
-        waitForElement(selector).then(element => {
+        waitForElement(selector).then(async element => {
             if (element) {
                 logDebug('Observer de participantes configurado com seletor:', selector);
-                observer.observe(element, { 
-                    childList: true, 
-                    characterData: true, 
-                    subtree: true 
+                observer.observe(element, {
+                    childList: true,
+                    characterData: true,
+                    subtree: true
                 });
+
+                // Processa contagem inicial
+                const text = element.textContent;
+                const match = text.match(/\d+/);
+                if (match) {
+                    const initialCount = parseInt(match[0]);
+                    if (!isNaN(initialCount)) {
+                        logDebug('Contagem inicial de participantes:', initialCount);
+                        participantCount = initialCount;
+                        peakParticipants = initialCount;
+
+                        // Atualiza o container se estiver em um modo relevante
+                        if (config.autoExitEnabled && (config.exitMode === 'participants' || config.exitMode === 'peak')) {
+                            updateExitInfo();
+                        }
+
+                        // Verifica condições de saída após contagem inicial
+                        await checkExitConditions();
+                    }
+                }
                 return;
             }
         });
@@ -637,9 +769,20 @@ async function checkParticipants(mutations) {
         if (isNaN(newCount)) return;
 
         if (newCount !== participantCount) {
-            logDebug('Número de participantes atualizado:', newCount);
+            logDebug('Número de participantes atualizado:', {
+                anterior: participantCount,
+                atual: newCount,
+                pico: Math.max(peakParticipants, newCount)
+            });
+            
+            // Atualiza contadores
             participantCount = newCount;
             peakParticipants = Math.max(peakParticipants, newCount);
+            
+            // Atualiza display se estiver nos modos relevantes
+            if (config.exitMode === 'participants' || config.exitMode === 'peak') {
+                updateExitInfo();
+            }
         }
 
         await checkExitConditions();
@@ -649,54 +792,72 @@ async function checkParticipants(mutations) {
 }
 
 function startExitTimer() {
+    // Limpa timers existentes primeiro
+    if (exitTimer) {
+        clearTimeout(exitTimer);
+        exitTimer = null;
+    }
+    if (checkTimerInterval) {
+        clearInterval(checkTimerInterval);
+        checkTimerInterval = null;
+    }
+
+    // Se saída automática estiver desativada, remove o container e retorna
     if (!config.autoExitEnabled) {
         logDebug('Timer não iniciado - Saída automática desativada');
+        const container = document.getElementById('meet-auto-leave-info');
+        if (container) {
+            container.remove();
+        }
         return false;
     }
 
-    if (config.exitMode === 'timer' && config.timerDuration > 0) {
-        const timeInMs = config.timerDuration * 60 * 1000;
-        const exitTime = new Date(Date.now() + timeInMs);
-        
-        logDebug('Iniciando timer de saída:', {
-            duracaoMinutos: config.timerDuration,
-            horarioSaida: exitTime.toLocaleTimeString()
-        });
+    // Configuração baseada no modo de saída
+    switch (config.exitMode) {
+        case 'timer':
+            if (config.timerDuration > 0) {
+                const timeInMs = config.timerDuration * 60 * 1000;
+                const exitTime = new Date(Date.now() + timeInMs);
+                
+                logDebug('Iniciando timer de saída:', {
+                    duracaoMinutos: config.timerDuration,
+                    horarioSaida: exitTime.toLocaleTimeString()
+                });
 
-        if (exitTimer) {
-            logDebug('Timer anterior encontrado, limpando...');
-            clearTimeout(exitTimer);
-        }
+                exitTimer = setTimeout(() => {
+                    logDebug('Timer de saída disparado');
+                    exitMeeting('Timer expirou');
+                }, timeInMs);
 
-        exitTimer = setTimeout(() => {
-            logDebug('Timer de saída disparado');
-            exitMeeting('Timer expirou');
-        }, timeInMs);
+                // Inicia verificação periódica do timer
+                checkTimerInterval = setInterval(() => {
+                    const timeLeft = exitTime - Date.now();
+                    updateExitInfo(timeLeft);
+                    
+                    // Log a cada minuto em vez de a cada segundo
+                    if (timeLeft % 60000 < 1000) {
+                        logDebug(`Timer de saída: ${Math.round(timeLeft / 1000 / 60)} minutos restantes`);
+                    }
+                }, 1000);
 
-        // Limpa intervalos anteriores se existirem
-        if (checkTimerInterval) {
-            clearInterval(checkTimerInterval);
-            checkTimerInterval = null;
-        }
+                // Atualização inicial
+                updateExitInfo(timeInMs);
+                return true;
+            }
+            break;
 
-        // Inicia verificação periódica do timer e atualização do container
-        checkTimerInterval = setInterval(() => {
-            const timeLeft = exitTime - Date.now();
-            updateExitInfo(timeLeft);
-            logDebug(`Timer de saída: ${Math.round(timeLeft / 1000 / 60)} minutos restantes`);
-        }, 1000); // Atualiza a cada segundo para ter um timer mais suave
-
-        // Atualização inicial
-        updateExitInfo(timeInMs);
-
-        return true;
-    } else {
-        logDebug('Timer não iniciado - Modo ou duração inválidos:', {
-            modo: config.exitMode,
-            duracao: config.timerDuration
-        });
-        return false;
+        case 'participants':
+        case 'peak':
+            // Apenas atualiza o container com as informações iniciais
+            updateExitInfo();
+            return true;
     }
+
+    logDebug('Timer não iniciado - Modo ou duração inválidos:', {
+        modo: config.exitMode,
+        duracao: config.timerDuration
+    });
+    return false;
 }
 
 function setupReactionObserver() {
@@ -711,17 +872,45 @@ async function checkExitConditions() {
 
         switch (config.exitMode) {
             case 'participants':
+                const participantsDiff = participantCount - config.minParticipants;
+                
+                // Log detalhado da situação
+                logDebug('Verificando condição de participantes:', {
+                    atual: participantCount,
+                    minimo: config.minParticipants,
+                    diferenca: participantsDiff
+                });
+
                 if (participantCount <= config.minParticipants) {
                     logDebug('Condição de saída atingida: mínimo de participantes');
                     await exitMeeting('Número mínimo de participantes atingido');
+                }
+                // Se estiver próximo do limite, atualiza o container
+                else if (participantsDiff <= 3) {
+                    updateExitInfo();
                 }
                 break;
 
             case 'peak':
                 const peakPercentage = (participantCount / peakParticipants) * 100;
+                const exitNumber = Math.ceil(peakParticipants * (config.peakPercentage / 100));
+                
+                // Log detalhado da situação
+                logDebug('Verificando condição de pico:', {
+                    pico: peakParticipants,
+                    atual: participantCount,
+                    porcentagem: peakPercentage.toFixed(1) + '%',
+                    meta: config.peakPercentage + '%',
+                    sairEm: exitNumber
+                });
+
                 if (peakPercentage <= config.peakPercentage) {
                     logDebug('Condição de saída atingida: porcentagem do pico');
                     await exitMeeting('Porcentagem do pico atingida');
+                }
+                // Se estiver próximo do limite, atualiza o container
+                else if (peakPercentage <= config.peakPercentage + 5) {
+                    updateExitInfo();
                 }
                 break;
 

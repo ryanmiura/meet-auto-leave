@@ -1,0 +1,98 @@
+/* Estilos para o container de informações do Meet Auto Leave */
+#meet-auto-leave-info {
+    position: fixed;
+    bottom: 20px;
+    left: 20px;
+    z-index: 9999;
+    background-color: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 12px;
+    border-radius: 8px;
+    font-family: 'Roboto', 'Segoe UI', Arial, sans-serif;
+    font-size: 14px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-width: 220px;
+    backdrop-filter: blur(5px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    transition: all 0.3s ease;
+}
+
+/* Título do container */
+#meet-auto-leave-info .info-title {
+    font-weight: bold;
+    margin-bottom: 4px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+#meet-auto-leave-info .info-title::before {
+    content: '🕒';
+    font-size: 16px;
+}
+
+/* Grid de informações */
+.info-grid {
+    display: grid;
+    grid-template-columns: auto auto;
+    gap: 8px;
+    margin-top: 4px;
+}
+
+.info-grid div {
+    padding: 4px 8px;
+    background-color: rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+    font-size: 13px;
+}
+
+/* Modo de saída */
+.exit-mode {
+    opacity: 0.8;
+    font-size: 13px;
+    padding-bottom: 4px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Estilos específicos para cada modo */
+.mode-timer .countdown {
+    font-size: 18px;
+    font-weight: bold;
+    text-align: center;
+    padding: 4px 0;
+}
+
+.mode-participants .highlight,
+.mode-peak .highlight {
+    color: #8ab4f8;
+    font-weight: bold;
+}
+
+/* Animações */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+#meet-auto-leave-info {
+    animation: fadeIn 0.3s ease-out;
+}
+
+/* Estado de alerta (quando próximo da saída) */
+.alert-state {
+    background-color: rgba(217, 48, 37, 0.8) !important;
+}
+
+/* Estado de saída iminente */
+.warning-state {
+    background-color: rgba(217, 148, 37, 0.8) !important;
+}

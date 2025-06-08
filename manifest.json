@@ -22,12 +22,18 @@
       "js": [
         "src/utils/storage.js",
         "src/content/content.js"
+      ],
+      "css": [
+        "src/content/styles.css"
       ]
     }
   ],
   "web_accessible_resources": [
     {
-      "resources": ["src/utils/storage.js"],
+      "resources": [
+        "src/utils/storage.js",
+        "src/content/styles.css"
+      ],
       "matches": ["*://meet.google.com/*"]
     }
   ],
