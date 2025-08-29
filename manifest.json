@@ -20,8 +20,12 @@
     {
       "matches": ["*://meet.google.com/*"],
       "js": [
+        "src/content/logger.js",
         "src/utils/storage.js",
-        "src/content/content.js"
+        "src/content/dom.js",
+        "src/content/ui.js",
+        "src/content/meet-logic.js",
+        "src/content/main.js"
       ],
       "css": [
         "src/content/styles.css"
